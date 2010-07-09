@@ -28,21 +28,20 @@ func usage() {
 }
 
 func makeRandPat(img *image.RGBA, x, y, w, h int) {
-	for y < h {
-		for x < w {
+	sx := x
+	sy := y
+
+	for y = sy; y < h; y++ {
+		for x = sx; x < w; x++ {
 			c := image.RGBAColor{
-				R: (uint8)rand.Int31n(255),
-				G: (uint8)rand.Int31n(255),
-				B: (uint8)rand.Int31n(255),
+				R: (uint8)(rand.Int31n(255)),
+				G: (uint8)(rand.Int31n(255)),
+				B: (uint8)(rand.Int31n(255)),
 				A: 255,
 			}
 
 			img.Set(x, y, c)
-
-			x++
 		}
-
-		y++
 	}
 }
 
@@ -100,7 +99,7 @@ func main() {
 
 	out := image.NewRGBA(in.Width() + partSize, in.Height())
 
-	makeRandPat(out)
+	makeRandPat(out, 0, 0, partSize, out.Height())
 	for part := 1; part < (in.Width() / partSize) + 1; part++ {
 		for y := 0; y < out.Height(); y++ {
 			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
