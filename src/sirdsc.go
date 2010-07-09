@@ -32,14 +32,29 @@ func main() {
 	}
 
 	inN := os.Args[1]
-	//outN := os.Args[2]
+	outN := os.Args[2]
 	partSize, _ := strconv.Atoi(os.Args[3])
 
-	inR, err := os.Open(inN, os.O_RDONLY, 0)
+	switch path.Ext(outN) {
+		case ".png", ".jpg", ".jpeg":
+			break
+		default:
+			usageE("Output image format not supported...")
+			os.Exit(1)
+	}
+	outR, err := os.Open(outN, os.O_RDWR | os.O_CREAT, 0666)
 	if err != nil {
 		usageE(err.String())
 		os.Exit(1)
 	}
+	defer outR.Close()
+
+	inR, err := os.Open(inN, os.O_RDONLY, 0666)
+	if err != nil {
+		usageE(err.String())
+		os.Exit(1)
+	}
+	defer inR.Close()
 
 	var in image.Image
 	switch path.Ext(inN) {
