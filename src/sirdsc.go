@@ -4,7 +4,7 @@ import(
 	"os"
 	"fmt"
 	"path"
-	"strconv"
+	"image"
 	"image/jpeg"
 	"image/png"
 )
@@ -31,22 +31,26 @@ func main() {
 	}
 
 	inN := os.Args[1]
-	outN := os.Args[2]
-	partSize, _ := strconv.Atoi(os.Args[3])
+	//outN := os.Args[2]
+	//partSize, _ := strconv.Atoi(os.Args[3])
 
-	inR, err := os.Open(inN)
+	inR, err := os.Open(inN, os.O_RDONLY, 0)
 	if err != nil {
 		usageE(err.String())
 		os.Exit(1)
 	}
 
+	var in image.Image
 	switch path.Ext(inN) {
-		case "jpg":
-			in, _ := jpeg.Decode(inR)
-		case "png":
-			in, _ := png.Decode(inR)
+		case ".jpg":
+			in, _ = jpeg.Decode(inR)
+		case ".png":
+			in, _ = png.Decode(inR)
 		default:
 			usageE("Format not supported...")
 			os.Exit(1)
 	}
+
+	r, g, b, a := in.At(0, 0).RGBA()
+	fmt.Printf("%i, %i, %i, %i\n", r, g, b, a)
 }
