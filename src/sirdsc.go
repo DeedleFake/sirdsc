@@ -4,6 +4,7 @@ import(
 	"os"
 	"fmt"
 	"path"
+	"strings"
 	"strconv"
 	"image"
 	"image/jpeg"
@@ -35,7 +36,7 @@ func main() {
 	outN := os.Args[2]
 	partSize, _ := strconv.Atoi(os.Args[3])
 
-	switch path.Ext(outN) {
+	switch strings.ToLower(path.Ext(outN)) {
 		case ".png", ".jpg", ".jpeg":
 			break
 		default:
@@ -57,7 +58,7 @@ func main() {
 	defer inR.Close()
 
 	var in image.Image
-	switch path.Ext(inN) {
+	switch strings.ToLower(path.Ext(inN)) {
 		case ".jpg", ".jpeg":
 			fmt.Printf("Loading Jpeg...\n")
 			in, err = jpeg.Decode(inR)
