@@ -9,8 +9,8 @@ import(
 	"image/png"
 )
 
-func usageE(e string) {
-	fmt.Printf("\033[0;41mError:\033[m %s\n", e)
+func usageE(err string) {
+	fmt.Printf("\033[0;41mError:\033[m %s\n", err)
 	fmt.Printf("---------------------------\n\n")
 
 	usage()
@@ -57,7 +57,7 @@ func main() {
 				os.Exit(1)
 			}
 		default:
-			usageE("Input format either not supported or could not be detected...")
+			usageE("Input image format either not supported or could not be detected...")
 			os.Exit(1)
 	}
 
