@@ -4,6 +4,7 @@ import(
 	"os"
 	"fmt"
 	"path"
+	"strconv"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -32,7 +33,7 @@ func main() {
 
 	inN := os.Args[1]
 	//outN := os.Args[2]
-	//partSize, _ := strconv.Atoi(os.Args[3])
+	partSize, _ := strconv.Atoi(os.Args[3])
 
 	inR, err := os.Open(inN, os.O_RDONLY, 0)
 	if err != nil {
@@ -61,6 +62,15 @@ func main() {
 			os.Exit(1)
 	}
 
-	r, g, b, a := in.At(0, 0).RGBA()
-	fmt.Printf("%i, %i, %i, %i\n", r, g, b, a)
+	out := image.NewRGBA(in.Width() + partSize, in.Height())
+
+	for part := 1; part < in.Width() / partSize; part++ {
+		for y := 0; y < out.Height(); y++ {
+			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
+				inX := outX - partSize
+
+				out.Set(outX, y, in.At(inX, y))
+			}
+		}
+	}
 }
