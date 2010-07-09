@@ -37,8 +37,8 @@ func main() {
 	partSize, _ := strconv.Atoi(os.Args[3])
 
 	switch strings.ToLower(path.Ext(outN)) {
-		case ".png", ".jpg", ".jpeg":
-			break
+		//case ".jpg", ".jpeg":
+		case ".png":
 		default:
 			usageE("Output image format not supported...")
 			os.Exit(1)
