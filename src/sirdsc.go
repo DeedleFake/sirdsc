@@ -3,13 +3,25 @@ package main
 import(
 	"os"
 	"fmt"
-	"strings"
+	"path"
 	"strconv"
+	"image/jpeg"
+	"image/png"
 )
+
+func usageE(e string) {
+	fmt.Printf("Error: %s\n", e)
+	fmt.Printf("---------------------------\n\n")
+
+	usage()
+}
 
 func usage() {
 	fmt.Printf("\033[0;1mUsage:\033[m\n")
-	fmt.Printf("\t%s <in> <out> <part-size>\n", os.Args[0])
+	fmt.Printf("\t%s <in> <out> <part-size>\n\n", os.Args[0])
+	fmt.Printf("\t\tin: A Jpeg or PNG file.\n")
+	fmt.Printf("\t\tout: A Jpeg or PNG file.\n")
+	fmt.Printf("\t\tpart-size: The width of each section of the SIRDS.\n")
 }
 
 func main() {
@@ -22,12 +34,19 @@ func main() {
 	outN := os.Args[2]
 	partSize, _ := strconv.Atoi(os.Args[3])
 
-	switch (strings.ToLower(inN[len(inN)-3:])) {
-		case "jpg":
-			fmt.Printf("Jpeg.\n")
-		case "png":
-			fmt.Printf("PNG.\n")
+	inR, err := os.Open(inN)
+	if err != nil {
+		usageE(err.String())
+		os.Exit(1)
 	}
 
-	fmt.Printf(outN, partSize)
+	switch path.Ext(inN) {
+		case "jpg":
+			in, _ := jpeg.Decode(inR)
+		case "png":
+			in, _ := png.Decode(inR)
+		default:
+			usageE("Format not supported...")
+			os.Exit(1)
+	}
 }
