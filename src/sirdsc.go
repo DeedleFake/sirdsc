@@ -4,6 +4,7 @@ import(
 	"os"
 	"fmt"
 	"path"
+	"rand"
 	"strings"
 	"strconv"
 	"image"
@@ -22,8 +23,27 @@ func usage() {
 	fmt.Printf("\033[0;1mUsage:\033[m\n")
 	fmt.Printf("\t%s <in> <out> <part-size>\n\n", os.Args[0])
 	fmt.Printf("\t\tin: A Jpeg or PNG file.\n")
-	fmt.Printf("\t\tout: A Jpeg or PNG file.\n")
+	fmt.Printf("\t\tout: A PNG file.\n")
 	fmt.Printf("\t\tpart-size: The width of each section of the SIRDS.\n")
+}
+
+func makeRandPat(img *image.RGBA, x, y, w, h int) {
+	for y < h {
+		for x < w {
+			c := image.RGBAColor{
+				R: (uint8)rand.Int31n(255),
+				G: (uint8)rand.Int31n(255),
+				B: (uint8)rand.Int31n(255),
+				A: 255,
+			}
+
+			img.Set(x, y, c)
+
+			x++
+		}
+
+		y++
+	}
 }
 
 func main() {
@@ -43,32 +63,32 @@ func main() {
 			usageE("Output image format not supported...")
 			os.Exit(1)
 	}
-	outR, err := os.Open(outN, os.O_RDWR | os.O_CREAT, 0666)
+	outF, err := os.Open(outN, os.O_RDWR | os.O_CREAT | os.O_TRUNC, 0666)
 	if err != nil {
 		usageE(err.String())
 		os.Exit(1)
 	}
-	defer outR.Close()
+	defer outF.Close()
 
-	inR, err := os.Open(inN, os.O_RDONLY, 0666)
+	inF, err := os.Open(inN, os.O_RDONLY, 0666)
 	if err != nil {
 		usageE(err.String())
 		os.Exit(1)
 	}
-	defer inR.Close()
+	defer inF.Close()
 
 	var in image.Image
 	switch strings.ToLower(path.Ext(inN)) {
 		case ".jpg", ".jpeg":
 			fmt.Printf("Loading Jpeg...\n")
-			in, err = jpeg.Decode(inR)
+			in, err = jpeg.Decode(inF)
 			if err != nil {
 				usageE(err.String())
 				os.Exit(1)
 			}
 		case ".png":
 			fmt.Printf("Loading PNG...\n")
-			in, err = png.Decode(inR)
+			in, err = png.Decode(inF)
 			if err != nil {
 				usageE(err.String())
 				os.Exit(1)
@@ -80,7 +100,8 @@ func main() {
 
 	out := image.NewRGBA(in.Width() + partSize, in.Height())
 
-	for part := 1; part < in.Width() / partSize; part++ {
+	makeRandPat(out)
+	for part := 1; part < (in.Width() / partSize) + 1; part++ {
 		for y := 0; y < out.Height(); y++ {
 			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
 				inX := outX - partSize
@@ -89,4 +110,9 @@ func main() {
 			}
 		}
 	}
+
+	fmt.Printf("Writing SIRDS...\n")
+	png.Encode(outF, out)
+
+	fmt.Printf("Done...\n")
 }
