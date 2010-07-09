@@ -10,7 +10,7 @@ import(
 )
 
 func usageE(e string) {
-	fmt.Printf("Error: %s\n", e)
+	fmt.Printf("\033[0;41mError:\033[m %s\n", e)
 	fmt.Printf("---------------------------\n\n")
 
 	usage()
@@ -42,12 +42,22 @@ func main() {
 
 	var in image.Image
 	switch path.Ext(inN) {
-		case ".jpg":
-			in, _ = jpeg.Decode(inR)
+		case ".jpg", ".jpeg":
+			fmt.Printf("Loading Jpeg...\n")
+			in, err = jpeg.Decode(inR)
+			if err != nil {
+				usageE(err.String())
+				os.Exit(1)
+			}
 		case ".png":
-			in, _ = png.Decode(inR)
+			fmt.Printf("Loading PNG...\n")
+			in, err = png.Decode(inR)
+			if err != nil {
+				usageE(err.String())
+				os.Exit(1)
+			}
 		default:
-			usageE("Format not supported...")
+			usageE("Input format either not supported or could not be detected...")
 			os.Exit(1)
 	}
 
