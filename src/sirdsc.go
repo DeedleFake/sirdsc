@@ -27,18 +27,35 @@ func usage() {
 	fmt.Printf("\t\tpart-size: The width of each section of the SIRDS.\n")
 }
 
+func colorsAreEqual(c, c2 image.Color) (bool) {
+	cR, cG, cB, cA := c.RGBA()
+	c2R, c2G, c2B, c2A := c2.RGBA()
+
+	if (cR == c2R) && (cG == c2G) && (cB == c2B) && (cA == c2A) {
+		return true
+	}
+
+	return false
+}
+
+func randomColor() (image.Color) {
+	c := image.RGBAColor{
+		R: (uint8)(rand.Int31n(255)),
+		G: (uint8)(rand.Int31n(255)),
+		B: (uint8)(rand.Int31n(255)),
+		A: 255,
+	}
+
+	return c
+}
+
 func makeRandPat(img *image.RGBA, x, y, w, h int) {
 	sx := x
 	sy := y
 
 	for y = sy; y < h; y++ {
 		for x = sx; x < w; x++ {
-			c := image.RGBAColor{
-				R: (uint8)(rand.Int31n(255)),
-				G: (uint8)(rand.Int31n(255)),
-				B: (uint8)(rand.Int31n(255)),
-				A: 255,
-			}
+			c := randomColor()
 
 			img.Set(x, y, c)
 		}
@@ -99,13 +116,22 @@ func main() {
 
 	out := image.NewRGBA(in.Width() + partSize, in.Height())
 
+	fmt.Printf("Generating SIRDS...\n")
 	makeRandPat(out, 0, 0, partSize, out.Height())
 	for part := 1; part < (in.Width() / partSize) + 1; part++ {
 		for y := 0; y < out.Height(); y++ {
 			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
 				inX := outX - partSize
 
-				out.Set(outX, y, in.At(inX, y))
+				if !colorsAreEqual(in.At(inX, y), image.Black) {
+					out.Set(outX - 5, y, out.At(inX, y))
+
+					for i := 0; i < 5; i++ {
+						out.Set(outX - i, y, randomColor())
+					}
+				} else {
+					out.Set(outX, y, out.At(inX, y))
+				}
 			}
 		}
 	}
