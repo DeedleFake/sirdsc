@@ -70,7 +70,11 @@ func main() {
 
 	inN := os.Args[1]
 	outN := os.Args[2]
-	partSize, _ := strconv.Atoi(os.Args[3])
+	partSize, err := strconv.Atoi(os.Args[3])
+	if err != nil {
+		usageE("Could not convert third argument to int...")
+		os.Exit(1)
+	}
 
 	switch strings.ToLower(path.Ext(outN)) {
 		//case ".jpg", ".jpeg":
