@@ -38,7 +38,7 @@ func usage() {
 }
 
 type imageData struct {
-	image.Image
+	*image.RGBA
 
 	FileType int
 	FileName string
@@ -66,19 +66,21 @@ func NewImageData(file string, dw, dh int) (img imageData, err os.Error) {
 
 		switch img.FileType {
 			case JPG:
-				img.Image, err = jpeg.Decode(fl)
+				tmpImage, err := jpeg.Decode(fl)
 				if err != nil {
 					return img, err
 				}
+				img.RGBA = tmpImage.(*image.RGBA)
 			case PNG:
-				img.Image, err = png.Decode(fl)
+				tmpImage, err := png.Decode(fl)
 				if err != nil {
 					return img, err
 				}
+				img.RGBA = tmpImage.(*image.RGBA)
 		}
 	} else {
 		if (dw > 0) && (dh > 0) {
-			img.Image = image.NewRGBA(dw, dh)
+			img.RGBA = image.NewRGBA(dw, dh)
 		} else {
 			return img, err
 		}
@@ -112,7 +114,7 @@ func (img *imageData)MakeRandPat(x, y, w, h int) {
 		for x = sx; x < w; x++ {
 			c := randomColor()
 
-			img.Image.(*image.RGBA).Set(x, y, c)
+			img.Set(x, y, c)
 		}
 	}
 }
@@ -183,13 +185,13 @@ func main() {
 				if !colorsAreEqual(in.At(inX, y), image.Black) {
 					depth := depthFromColor(in.At(inX, y))
 
-					out.Image.(*image.RGBA).Set(outX - depth, y, out.At(inX, y))
+					out.Set(outX - depth, y, out.At(inX, y))
 
 					for i := 0; i < depth; i++ {
-						out.Image.(*image.RGBA).Set(outX - i, y, randomColor())
+						out.Set(outX - i, y, randomColor())
 					}
 				} else {
-					out.Image.(*image.RGBA).Set(outX, y, out.At(inX, y))
+					out.Set(outX, y, out.At(inX, y))
 				}
 			}
 		}
