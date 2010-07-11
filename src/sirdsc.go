@@ -45,17 +45,9 @@ type imageData struct {
 }
 
 func NewImageData(file string, dw, dh int) (img imageData, err os.Error) {
-	img.FileName = file
-
-	if file != "" {
-		switch strings.ToLower(path.Ext(file)) {
-			case ".jpg", ".jpeg":
-				img.FileType = JPG
-			case ".png":
-				img.FileType = PNG
-			default:
-				return img, os.NewError("Image format not supported or could not be detected...")
-		}
+	err = img.SetFileName(file)
+	if err != nil {
+		return img, err
 	}
 
 	_, err = os.Lstat(img.FileName)
@@ -89,6 +81,23 @@ func NewImageData(file string, dw, dh int) (img imageData, err os.Error) {
 	}
 
 	return img, nil
+}
+
+func (img *imageData)SetFileName(file string) (err os.Error) {
+	if file != "" {
+		switch strings.ToLower(path.Ext(file)) {
+			case ".jpg", ".jpeg":
+				img.FileType = JPG
+			case ".png":
+				img.FileType = PNG
+			default:
+				return os.NewError("Image format not supported or could not be detected...")
+		}
+	}
+
+	img.FileName = file
+
+	return nil
 }
 
 func (img *imageData)Save() (err os.Error) {
@@ -187,7 +196,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	out, err := NewImageData(os.Args[2], in.Width(), in.Height())
+	out, err := NewImageData("", in.Width(), in.Height())
+	if err != nil {
+		usageE(err.String())
+		os.Exit(1)
+	}
+	err = out.SetFileName(os.Args[2])
 	if err != nil {
 		usageE(err.String())
 		os.Exit(1)
