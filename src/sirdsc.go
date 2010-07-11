@@ -153,6 +153,20 @@ func randomColor() (image.Color) {
 	return c
 }
 
+func copyAndCheckPixel(in *image.RGBA, in2 *image.RGBA, inX, inY int, out *image.RGBA, outX, outY int) {
+	if !colorsAreEqual(in.At(inX, inY), image.Black) {
+		depth := depthFromColor(in.At(inX, inY))
+
+		out.Set(outX - depth, outY, in2.At(inX, inY))
+
+		for i := 0; i < depth; i++ {
+			out.Set(outX - i, outY, randomColor())
+		}
+	} else {
+		out.Set(outX, outY, in2.At(inX, inY))
+	}
+}
+
 func main() {
 	if len(os.Args) != 4 {
 		usage()
@@ -168,31 +182,34 @@ func main() {
 	in, err := NewImageData(os.Args[1], 0, 0)
 	if err != nil {
 		usageE(err.String())
+		os.Exit(1)
 	}
 
 	out, err := NewImageData(os.Args[2], in.Width() + partSize, in.Height())
 	if err != nil {
 		usageE(err.String())
+		os.Exit(1)
+	}
+
+	pat, err := NewImageData("", partSize, out.Height())
+	if err != nil {
+		usageE(err.String())
+		os.Exit(1)
 	}
 
 	fmt.Printf("Generating SIRDS...\n")
-	out.MakeRandPat(0, 0, partSize, out.Height())
-	for part := 1; part < (in.Width() / partSize) + 1; part++ {
+	pat.MakeRandPat(0, 0, pat.Width(), pat.Height())
+	for y := 0; y < pat.Height(); y++ {
+		for x := 0; x < pat.Width(); x++ {
+			copyAndCheckPixel(in.RGBA, pat.RGBA, x, y, out.RGBA, x, y)
+		}
+	}
+	for part := 2; part < (in.Width() / partSize) + 1; part++ {
 		for y := 0; y < out.Height(); y++ {
 			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
 				inX := outX - partSize
 
-				if !colorsAreEqual(in.At(inX, y), image.Black) {
-					depth := depthFromColor(in.At(inX, y))
-
-					out.Set(outX - depth, y, out.At(inX, y))
-
-					for i := 0; i < depth; i++ {
-						out.Set(outX - i, y, randomColor())
-					}
-				} else {
-					out.Set(outX, y, out.At(inX, y))
-				}
+				copyAndCheckPixel(in.RGBA, out.RGBA, inX, y, out.RGBA, outX, y)
 			}
 		}
 	}
