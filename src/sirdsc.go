@@ -47,17 +47,19 @@ type imageData struct {
 func NewImageData(file string, dw, dh int) (img imageData, err os.Error) {
 	img.FileName = file
 
-	switch strings.ToLower(path.Ext(file)) {
-		case ".jpg", ".jpeg":
-			img.FileType = JPG
-		case ".png":
-			img.FileType = PNG
-		default:
-			return img, os.NewError("Image format not supported or could not be detected...")
+	if file != "" {
+		switch strings.ToLower(path.Ext(file)) {
+			case ".jpg", ".jpeg":
+				img.FileType = JPG
+			case ".png":
+				img.FileType = PNG
+			default:
+				return img, os.NewError("Image format not supported or could not be detected...")
+		}
 	}
 
 	_, err = os.Lstat(img.FileName)
-	if err == nil {
+	if (err == nil) && (file != "") {
 		fl, err := os.Open(img.FileName, os.O_RDONLY, 0666)
 		if err != nil {
 			return img, err
@@ -185,7 +187,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	out, err := NewImageData(os.Args[2], in.Width() + partSize, in.Height())
+	out, err := NewImageData(os.Args[2], in.Width(), in.Height())
 	if err != nil {
 		usageE(err.String())
 		os.Exit(1)
@@ -199,17 +201,16 @@ func main() {
 
 	fmt.Printf("Generating SIRDS...\n")
 	pat.MakeRandPat(0, 0, pat.Width(), pat.Height())
-	for y := 0; y < pat.Height(); y++ {
-		for x := 0; x < pat.Width(); x++ {
-			copyAndCheckPixel(in.RGBA, pat.RGBA, x, y, out.RGBA, x, y)
-		}
-	}
-	for part := 2; part < (in.Width() / partSize) + 1; part++ {
+	for part := 1; part < (in.Width() / partSize); part++ {
 		for y := 0; y < out.Height(); y++ {
 			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
 				inX := outX - partSize
 
-				copyAndCheckPixel(in.RGBA, out.RGBA, inX, y, out.RGBA, outX, y)
+				if inX < 0 {
+					copyAndCheckPixel(in.RGBA, pat.RGBA, outX, y, out.RGBA, outX, y)
+				} else {
+					copyAndCheckPixel(in.RGBA, out.RGBA, inX, y, out.RGBA, outX, y)
+				}
 			}
 		}
 	}
