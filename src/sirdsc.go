@@ -215,7 +215,7 @@ func main() {
 
 	fmt.Printf("Generating SIRDS...\n")
 	pat.MakeRandPat(0, 0, pat.Width(), pat.Height())
-	for part := 1; part < (in.Width() / partSize); part++ {
+	for part := 0; part < (in.Width() / partSize); part++ {
 		for y := 0; y < out.Height(); y++ {
 			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
 				inX := outX - partSize
