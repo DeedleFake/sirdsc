@@ -17,6 +17,11 @@ const(
 	MaxDepth = 10
 )
 
+const(
+	JPG = iota
+	PNG = iota
+)
+
 func usageE(err string) {
 	fmt.Printf("\033[0;41mError:\033[m %s\n", err)
 	fmt.Printf("---------------------------\n\n")
@@ -30,6 +35,86 @@ func usage() {
 	fmt.Printf("\t\tin: A Jpeg or PNG file.\n")
 	fmt.Printf("\t\tout: A PNG file.\n")
 	fmt.Printf("\t\tpart-size: The width of each section of the SIRDS.\n")
+}
+
+type imageData struct {
+	image.Image
+
+	FileType int
+	FileName string
+}
+
+func NewImageData(file string, dw, dh int) (img imageData, err os.Error) {
+	img.FileName = file
+
+	switch strings.ToLower(path.Ext(file)) {
+		case ".jpg", ".jpeg":
+			img.FileType = JPG
+		case ".png":
+			img.FileType = PNG
+		default:
+			return img, os.NewError("Image format not supported or could not be detected...")
+	}
+
+	_, err = os.Lstat(img.FileName)
+	if err == nil {
+		fl, err := os.Open(img.FileName, os.O_RDONLY, 0666)
+		if err != nil {
+			return img, err
+		}
+		defer fl.Close()
+
+		switch img.FileType {
+			case JPG:
+				img.Image, err = jpeg.Decode(fl)
+				if err != nil {
+					return img, err
+				}
+			case PNG:
+				img.Image, err = png.Decode(fl)
+				if err != nil {
+					return img, err
+				}
+		}
+	} else {
+		if (dw > 0) && (dh > 0) {
+			img.Image = image.NewRGBA(dw, dh)
+		} else {
+			return img, err
+		}
+	}
+
+	return img, nil
+}
+
+func (img *imageData)Save() (err os.Error) {
+	fl, err := os.Open(img.FileName, os.O_RDWR | os.O_CREAT | os.O_TRUNC, 0666)
+	if err != nil {
+		return err
+	}
+	defer fl.Close()
+
+	switch img.FileType {
+		case PNG:
+			png.Encode(fl, img)
+		default:
+			return os.NewError("Image format can't be saved to...")
+	}
+
+	return nil
+}
+
+func (img *imageData)MakeRandPat(x, y, w, h int) {
+	sx := x
+	sy := y
+
+	for y = sy; y < h; y++ {
+		for x = sx; x < w; x++ {
+			c := randomColor()
+
+			img.Image.(*image.RGBA).Set(x, y, c)
+		}
+	}
 }
 
 func colorsAreEqual(c, c2 image.Color) (bool) {
@@ -66,79 +151,30 @@ func randomColor() (image.Color) {
 	return c
 }
 
-func makeRandPat(img *image.RGBA, x, y, w, h int) {
-	sx := x
-	sy := y
-
-	for y = sy; y < h; y++ {
-		for x = sx; x < w; x++ {
-			c := randomColor()
-
-			img.Set(x, y, c)
-		}
-	}
-}
-
 func main() {
 	if len(os.Args) != 4 {
 		usage()
 		os.Exit(1)
 	}
 
-	inN := os.Args[1]
-	outN := os.Args[2]
 	partSize, err := strconv.Atoi(os.Args[3])
 	if err != nil {
 		usageE("Could not convert third argument to int...")
 		os.Exit(1)
 	}
 
-	switch strings.ToLower(path.Ext(outN)) {
-		//case ".jpg", ".jpeg":
-		case ".png":
-		default:
-			usageE("Output image format not supported...")
-			os.Exit(1)
-	}
-	outF, err := os.Open(outN, os.O_RDWR | os.O_CREAT | os.O_TRUNC, 0666)
+	in, err := NewImageData(os.Args[1], 0, 0)
 	if err != nil {
 		usageE(err.String())
-		os.Exit(1)
 	}
-	defer outF.Close()
 
-	inF, err := os.Open(inN, os.O_RDONLY, 0666)
+	out, err := NewImageData(os.Args[2], in.Width() + partSize, in.Height())
 	if err != nil {
 		usageE(err.String())
-		os.Exit(1)
 	}
-	defer inF.Close()
-
-	var in image.Image
-	switch strings.ToLower(path.Ext(inN)) {
-		case ".jpg", ".jpeg":
-			fmt.Printf("Loading Jpeg...\n")
-			in, err = jpeg.Decode(inF)
-			if err != nil {
-				usageE(err.String())
-				os.Exit(1)
-			}
-		case ".png":
-			fmt.Printf("Loading PNG...\n")
-			in, err = png.Decode(inF)
-			if err != nil {
-				usageE(err.String())
-				os.Exit(1)
-			}
-		default:
-			usageE("Input image format either not supported or could not be detected...")
-			os.Exit(1)
-	}
-
-	out := image.NewRGBA(in.Width() + partSize, in.Height())
 
 	fmt.Printf("Generating SIRDS...\n")
-	makeRandPat(out, 0, 0, partSize, out.Height())
+	out.MakeRandPat(0, 0, partSize, out.Height())
 	for part := 1; part < (in.Width() / partSize) + 1; part++ {
 		for y := 0; y < out.Height(); y++ {
 			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
@@ -147,20 +183,20 @@ func main() {
 				if !colorsAreEqual(in.At(inX, y), image.Black) {
 					depth := depthFromColor(in.At(inX, y))
 
-					out.Set(outX - depth, y, out.At(inX, y))
+					out.Image.(*image.RGBA).Set(outX - depth, y, out.At(inX, y))
 
 					for i := 0; i < depth; i++ {
-						out.Set(outX - i, y, randomColor())
+						out.Image.(*image.RGBA).Set(outX - i, y, randomColor())
 					}
 				} else {
-					out.Set(outX, y, out.At(inX, y))
+					out.Image.(*image.RGBA).Set(outX, y, out.At(inX, y))
 				}
 			}
 		}
 	}
 
 	fmt.Printf("Writing SIRDS...\n")
-	png.Encode(outF, out)
+	out.Save()
 
 	fmt.Printf("Done...\n")
 }
