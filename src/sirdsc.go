@@ -5,11 +5,16 @@ import(
 	"fmt"
 	"path"
 	"rand"
+	"math"
 	"strings"
 	"strconv"
 	"image"
 	"image/jpeg"
 	"image/png"
+)
+
+const(
+	MaxDepth = 10
 )
 
 func usageE(err string) {
@@ -36,6 +41,18 @@ func colorsAreEqual(c, c2 image.Color) (bool) {
 	}
 
 	return false
+}/**/
+
+func depthFromColor(c image.Color) (d int) {
+	r, g, b, _ := c.RGBA()
+
+	r = uint32(float(r * MaxDepth) / math.MaxUint32)
+	g = uint32(float(g * MaxDepth) / math.MaxUint32)
+	b = uint32(float(b * MaxDepth) / math.MaxUint32)
+
+	d = int(float((r + g + b) * MaxDepth) / (MaxDepth * 3))
+
+	return 5
 }
 
 func randomColor() (image.Color) {
@@ -128,9 +145,11 @@ func main() {
 				inX := outX - partSize
 
 				if !colorsAreEqual(in.At(inX, y), image.Black) {
-					out.Set(outX - 5, y, out.At(inX, y))
+					depth := depthFromColor(in.At(inX, y))
 
-					for i := 0; i < 5; i++ {
+					out.Set(outX - depth, y, out.At(inX, y))
+
+					for i := 0; i < depth; i++ {
 						out.Set(outX - i, y, randomColor())
 					}
 				} else {
