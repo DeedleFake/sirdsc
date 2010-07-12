@@ -130,7 +130,7 @@ func (img *imageData)MakeRandPat(x, y, w, h int) {
 	}
 }
 
-func colorsAreEqual(c, c2 image.Color) (bool) {
+/*func colorsAreEqual(c, c2 image.Color) (bool) {
 	cR, cG, cB, cA := c.RGBA()
 	c2R, c2G, c2B, c2A := c2.RGBA()
 
@@ -139,25 +139,22 @@ func colorsAreEqual(c, c2 image.Color) (bool) {
 	}
 
 	return false
-}/**/
+}*/
 
 func depthFromColor(c image.Color) (d int) {
 	r, g, b, _ := c.RGBA()
 
-	r = uint32(float(r * MaxDepth) / math.MaxUint32)
-	g = uint32(float(g * MaxDepth) / math.MaxUint32)
-	b = uint32(float(b * MaxDepth) / math.MaxUint32)
+	v := math.Fmax(float64(g), math.Fmax(float64(b), float64(r)))
+	d = int(v * MaxDepth / float64(math.MaxUint32))
 
-	d = int(float((r + g + b) * MaxDepth) / (MaxDepth * 3))
-
-	return 5
+	return d
 }
 
 func randomColor() (image.Color) {
 	c := image.RGBAColor{
-		R: (uint8)(rand.Int31n(255)),
-		G: (uint8)(rand.Int31n(255)),
-		B: (uint8)(rand.Int31n(255)),
+		R: (uint8)(rand.Uint32()),
+		G: (uint8)(rand.Uint32()),
+		B: (uint8)(rand.Uint32()),
 		A: 255,
 	}
 
@@ -165,16 +162,12 @@ func randomColor() (image.Color) {
 }
 
 func copyAndCheckPixel(in *image.RGBA, in2 *image.RGBA, inX, inY int, out *image.RGBA, outX, outY int) {
-	if !colorsAreEqual(in.At(inX, inY), image.Black) {
-		depth := depthFromColor(in.At(inX, inY))
+	depth := depthFromColor(in.At(inX, inY))
 
+	out.Set(outX, outY, randomColor())
+
+	if outX - depth >= 0 {
 		out.Set(outX - depth, outY, in2.At(inX, inY))
-
-		for i := 0; i < depth; i++ {
-			out.Set(outX - i, outY, randomColor())
-		}
-	} else {
-		out.Set(outX, outY, in2.At(inX, inY))
 	}
 }
 
