@@ -11,6 +11,7 @@ import(
 	"image"
 	"image/jpeg"
 	"image/png"
+	"reflect"
 )
 
 const(
@@ -37,14 +38,16 @@ func usage() {
 	fmt.Printf("\t\tpart-size: The width of each section of the SIRDS.\n")
 }
 
-type imageData struct {
-	*image.RGBA
+type ImageData struct {
+	image.Image
 
 	FileType int
 	FileName string
 }
 
-func NewImageData(file string, dw, dh int) (img imageData, err os.Error) {
+func NewImageData(file string, dw, dh int) (img *ImageData, err os.Error) {
+	img = new(ImageData)
+
 	err = img.SetFileName(file)
 	if err != nil {
 		return img, err
@@ -58,23 +61,24 @@ func NewImageData(file string, dw, dh int) (img imageData, err os.Error) {
 		}
 		defer fl.Close()
 
+		var tmpImage image.Image
 		switch img.FileType {
 			case JPG:
-				tmpImage, err := jpeg.Decode(fl)
+				tmpImage, err = jpeg.Decode(fl)
 				if err != nil {
 					return img, err
 				}
-				img.RGBA = tmpImage.(*image.RGBA)
+				img.Image = tmpImage
 			case PNG:
-				tmpImage, err := png.Decode(fl)
+				tmpImage, err = png.Decode(fl)
 				if err != nil {
 					return img, err
 				}
-				img.RGBA = tmpImage.(*image.RGBA)
+				img.Image = tmpImage
 		}
 	} else {
 		if (dw > 0) && (dh > 0) {
-			img.RGBA = image.NewRGBA(dw, dh)
+			img.Image = image.NewRGBA(dw, dh)
 		} else {
 			return img, err
 		}
@@ -83,7 +87,7 @@ func NewImageData(file string, dw, dh int) (img imageData, err os.Error) {
 	return img, nil
 }
 
-func (img *imageData)SetFileName(file string) (err os.Error) {
+func (img *ImageData)SetFileName(file string) (err os.Error) {
 	if file != "" {
 		switch strings.ToLower(path.Ext(file)) {
 			case ".jpg", ".jpeg":
@@ -100,7 +104,7 @@ func (img *imageData)SetFileName(file string) (err os.Error) {
 	return nil
 }
 
-func (img *imageData)Save() (err os.Error) {
+func (img *ImageData)Save() (err os.Error) {
 	fl, err := os.Create(img.FileName)
 	if err != nil {
 		return err
@@ -117,7 +121,7 @@ func (img *imageData)Save() (err os.Error) {
 	return nil
 }
 
-func (img *imageData)MakeRandPat(x, y, w, h int) {
+func (img *ImageData)MakeRandPat(x, y, w, h int) {
 	sx := x
 	sy := y
 
@@ -128,6 +132,31 @@ func (img *imageData)MakeRandPat(x, y, w, h int) {
 			img.Set(x, y, c)
 		}
 	}
+}
+
+func (img *ImageData)Set(x, y int, c image.Color) {
+	v := reflect.NewValue(img.Image)
+	if v.Type().Kind() == reflect.Interface {
+		v = reflect.Indirect(v.Elem())
+	}
+
+	args := []reflect.Value{
+		v,
+		reflect.NewValue(x),
+		reflect.NewValue(y),
+		reflect.NewValue(c),
+	}
+
+	t := v.Type()
+	for i := 0; i < t.NumMethod(); i++ {
+		m := t.Method(i)
+		if m.Name == "Set" {
+			m.Func.Call(args)
+			return
+		}
+	}
+
+	panic("no 'Set' method")
 }
 
 //func colorsAreEqual(c, c2 image.Color) (bool) {
@@ -164,7 +193,7 @@ func randomColor() (image.Color) {
 	return c
 }
 
-func copyAndCheckPixel(in *image.RGBA, in2 *image.RGBA, inX, inY int, out *image.RGBA, outX, outY int) {
+func copyAndCheckPixel(in *ImageData, in2 *ImageData, inX, inY int, out *ImageData, outX, outY int) {
 	depth := depthFromColor(in.At(inX, inY))
 
 	out.Set(outX, outY, randomColor())
@@ -192,7 +221,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	out, err := NewImageData("", in.Rect.Dx(), in.Rect.Dy())
+	out, err := NewImageData("", in.Bounds().Dx(), in.Bounds().Dy())
 	if err != nil {
 		usageE(err.String())
 		os.Exit(1)
@@ -203,23 +232,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	pat, err := NewImageData("", partSize, out.Rect.Dy())
+	pat, err := NewImageData("", partSize, out.Bounds().Dy())
 	if err != nil {
 		usageE(err.String())
 		os.Exit(1)
 	}
 
 	fmt.Printf("Generating SIRDS...\n")
-	pat.MakeRandPat(0, 0, pat.Rect.Dx(), pat.Rect.Dy())
-	for part := 0; part < (in.Rect.Dx() / partSize); part++ {
-		for y := 0; y < out.Rect.Dy(); y++ {
+	pat.MakeRandPat(0, 0, pat.Bounds().Dx(), pat.Bounds().Dy())
+	for part := 0; part < (in.Bounds().Dx() / partSize); part++ {
+		for y := 0; y < out.Bounds().Dy(); y++ {
 			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
 				inX := outX - partSize
 
 				if inX < 0 {
-					copyAndCheckPixel(in.RGBA, pat.RGBA, outX, y, out.RGBA, outX, y)
+					copyAndCheckPixel(in, pat, outX, y, out, outX, y)
 				} else {
-					copyAndCheckPixel(in.RGBA, out.RGBA, inX, y, out.RGBA, outX, y)
+					copyAndCheckPixel(in, out, inX, y, out, outX, y)
 				}
 			}
 		}
