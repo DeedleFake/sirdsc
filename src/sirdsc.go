@@ -52,7 +52,7 @@ func NewImageData(file string, dw, dh int) (img imageData, err os.Error) {
 
 	_, err = os.Lstat(img.FileName)
 	if (err == nil) && (file != "") {
-		fl, err := os.Open(img.FileName, os.O_RDONLY, 0666)
+		fl, err := os.Open(img.FileName)
 		if err != nil {
 			return img, err
 		}
@@ -101,7 +101,7 @@ func (img *imageData)SetFileName(file string) (err os.Error) {
 }
 
 func (img *imageData)Save() (err os.Error) {
-	fl, err := os.Open(img.FileName, os.O_RDWR | os.O_CREAT | os.O_TRUNC, 0666)
+	fl, err := os.Create(img.FileName)
 	if err != nil {
 		return err
 	}
@@ -130,22 +130,25 @@ func (img *imageData)MakeRandPat(x, y, w, h int) {
 	}
 }
 
-/*func colorsAreEqual(c, c2 image.Color) (bool) {
-	cR, cG, cB, cA := c.RGBA()
-	c2R, c2G, c2B, c2A := c2.RGBA()
-
-	if (cR == c2R) && (cG == c2G) && (cB == c2B) && (cA == c2A) {
-		return true
-	}
-
-	return false
-}*/
+//func colorsAreEqual(c, c2 image.Color) (bool) {
+//	cR, cG, cB, cA := c.RGBA()
+//	c2R, c2G, c2B, c2A := c2.RGBA()
+//
+//	if (cR == c2R) && (cG == c2G) && (cB == c2B) && (cA == c2A) {
+//		return true
+//	}
+//
+//	return false
+//}
 
 func depthFromColor(c image.Color) (d int) {
 	r, g, b, _ := c.RGBA()
 
 	v := math.Fmax(float64(g), math.Fmax(float64(b), float64(r)))
-	d = int(v * MaxDepth / float64(math.MaxUint32))
+	//d = int(v * MaxDepth / float64(math.MaxUint32))
+	if v != 0 {
+		return 5
+	}
 
 	return d
 }
@@ -189,7 +192,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	out, err := NewImageData("", in.Width(), in.Height())
+	out, err := NewImageData("", in.Rect.Dx(), in.Rect.Dy())
 	if err != nil {
 		usageE(err.String())
 		os.Exit(1)
@@ -200,16 +203,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	pat, err := NewImageData("", partSize, out.Height())
+	pat, err := NewImageData("", partSize, out.Rect.Dy())
 	if err != nil {
 		usageE(err.String())
 		os.Exit(1)
 	}
 
 	fmt.Printf("Generating SIRDS...\n")
-	pat.MakeRandPat(0, 0, pat.Width(), pat.Height())
-	for part := 0; part < (in.Width() / partSize); part++ {
-		for y := 0; y < out.Height(); y++ {
+	pat.MakeRandPat(0, 0, pat.Rect.Dx(), pat.Rect.Dy())
+	for part := 0; part < (in.Rect.Dx() / partSize); part++ {
+		for y := 0; y < out.Rect.Dy(); y++ {
 			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
 				inX := outX - partSize
 
