@@ -127,7 +127,12 @@ func (img *ImageData)MakeRandPat(x, y, w, h int) {
 
 	for y = sy; y < h; y++ {
 		for x = sx; x < w; x++ {
-			c := randomColor()
+			cv := reflect.NewValue(img.Image.At(0, 0))
+			if cv.Type().Kind() == reflect.Interface {
+				cv = reflect.Indirect(cv.Elem())
+			}
+
+			c := randomColor(cv.Type())
 
 			img.Set(x, y, c)
 		}
@@ -140,11 +145,16 @@ func (img *ImageData)Set(x, y int, c image.Color) {
 		v = reflect.Indirect(v.Elem())
 	}
 
+	cv := reflect.NewValue(c)
+	if cv.Type().Kind() == reflect.Interface {
+		cv = reflect.Indirect(cv.Elem())
+	}
+
 	args := []reflect.Value{
 		v,
 		reflect.NewValue(x),
 		reflect.NewValue(y),
-		reflect.NewValue(c),
+		cv,
 	}
 
 	t := v.Type()
@@ -182,21 +192,25 @@ func depthFromColor(c image.Color) (d int) {
 	return d
 }
 
-func randomColor() (image.Color) {
-	c := image.RGBAColor{
-		R: (uint8)(rand.Uint32()),
-		G: (uint8)(rand.Uint32()),
-		B: (uint8)(rand.Uint32()),
-		A: 255,
-	}
+func randomColor(t reflect.Type) (image.Color) {
+	c := reflect.Zero(t)
+	c.FieldByName("R").Set(reflect.NewValue((uint8)(rand.Uint32())))
+	c.FieldByName("G").Set(reflect.NewValue((uint8)(rand.Uint32())))
+	c.FieldByName("B").Set(reflect.NewValue((uint8)(rand.Uint32())))
+	c.FieldByName("A").Set(reflect.NewValue(255))
 
-	return c
+	return c.Interface().(image.Color)
 }
 
 func copyAndCheckPixel(in *ImageData, in2 *ImageData, inX, inY int, out *ImageData, outX, outY int) {
 	depth := depthFromColor(in.At(inX, inY))
 
-	out.Set(outX, outY, randomColor())
+	cv := reflect.NewValue(out.Image.At(0, 0))
+	if cv.Type().Kind() == reflect.Interface {
+		cv = reflect.Indirect(cv.Elem())
+	}
+
+	out.Set(outX, outY, randomColor(cv.Type()))
 
 	if outX - depth >= 0 {
 		out.Set(outX - depth, outY, in2.At(inX, inY))
