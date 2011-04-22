@@ -3,15 +3,10 @@ package main
 import(
 	"os"
 	"fmt"
-	"path"
 	"rand"
 	"math"
-	"strings"
-	"strconv"
 	"image"
-	"image/jpeg"
-	"image/png"
-	"reflect"
+	"strconv"
 )
 
 const(
@@ -23,7 +18,7 @@ const(
 	PNG
 )
 
-func usageE(err string) {
+func usageE(err fmt.Stringer) {
 	fmt.Printf("\033[0;41mError:\033[m %s\n", err)
 	fmt.Printf("---------------------------\n\n")
 
@@ -32,133 +27,10 @@ func usageE(err string) {
 
 func usage() {
 	fmt.Printf("\033[0;1mUsage:\033[m\n")
-	fmt.Printf("\t%s <in> <out> <part-size>\n\n", os.Args[0])
-	fmt.Printf("\t\tin: A Jpeg or PNG file.\n")
-	fmt.Printf("\t\tout: A PNG file.\n")
+	fmt.Printf("\t%s <src> <dst> <part-size>\n\n", os.Args[0])
+	fmt.Printf("\t\tsrc: A Jpeg or PNG file.\n")
+	fmt.Printf("\t\tdst: A PNG file.\n")
 	fmt.Printf("\t\tpart-size: The width of each section of the SIRDS.\n")
-}
-
-type ImageData struct {
-	image.Image
-
-	FileType int
-	FileName string
-}
-
-func NewImageData(file string, dw, dh int) (img *ImageData, err os.Error) {
-	img = new(ImageData)
-
-	err = img.SetFileName(file)
-	if err != nil {
-		return img, err
-	}
-
-	_, err = os.Lstat(img.FileName)
-	if (err == nil) && (file != "") {
-		fl, err := os.Open(img.FileName)
-		if err != nil {
-			return img, err
-		}
-		defer fl.Close()
-
-		var tmpImage image.Image
-		switch img.FileType {
-			case JPG:
-				tmpImage, err = jpeg.Decode(fl)
-				if err != nil {
-					return img, err
-				}
-				img.Image = tmpImage
-			case PNG:
-				tmpImage, err = png.Decode(fl)
-				if err != nil {
-					return img, err
-				}
-				img.Image = tmpImage
-		}
-	} else {
-		if (dw > 0) && (dh > 0) {
-			img.Image = image.NewRGBA(dw, dh)
-		} else {
-			return img, err
-		}
-	}
-
-	return img, nil
-}
-
-func (img *ImageData)SetFileName(file string) (err os.Error) {
-	if file != "" {
-		switch strings.ToLower(path.Ext(file)) {
-			case ".jpg", ".jpeg":
-				img.FileType = JPG
-			case ".png":
-				img.FileType = PNG
-			default:
-				return os.NewError("Image format not supported or could not be detected...")
-		}
-	}
-
-	img.FileName = file
-
-	return nil
-}
-
-func (img *ImageData)Save() (err os.Error) {
-	fl, err := os.Create(img.FileName)
-	if err != nil {
-		return err
-	}
-	defer fl.Close()
-
-	switch img.FileType {
-		case PNG:
-			png.Encode(fl, img)
-		default:
-			return os.NewError("Image format can't be saved to...")
-	}
-
-	return nil
-}
-
-func (img *ImageData)MakeRandPat(x, y, w, h int) {
-	sx := x
-	sy := y
-
-	for y = sy; y < h; y++ {
-		for x = sx; x < w; x++ {
-			c := randomColor()
-
-			img.Set(x, y, c)
-		}
-	}
-}
-
-func (img *ImageData)Set(x, y int, c image.Color) {
-	v := reflect.NewValue(img.Image)
-
-	c = img.Image.ColorModel().Convert(c)
-
-	args := []reflect.Value{
-		v,
-		reflect.NewValue(x),
-		reflect.NewValue(y),
-	}
-
-	t := v.Type()
-	for i := 0; i < t.NumMethod(); i++ {
-		m := t.Method(i)
-		if m.Name == "Set" {
-			cv := reflect.Zero(m.Type.In(3))
-			cv.Set(reflect.NewValue(c))
-			args = append(args, cv)
-
-			m.Func.Call(args)
-			return
-		}
-	}
-
-	panic("no 'Set' method")
 }
 
 //func colorsAreEqual(c, c2 image.Color) (bool) {
@@ -195,7 +67,7 @@ func randomColor() (image.Color) {
 	return c
 }
 
-func copyAndCheckPixel(in *ImageData, in2 *ImageData, inX, inY int, out *ImageData, outX, outY int) {
+func copyAndCheckPixel(in *ImageFile, in2 *ImageFile, inX, inY int, out *ImageFile, outX, outY int) {
 	depth := depthFromColor(in.At(inX, inY))
 
 	out.Set(outX, outY, randomColor())
@@ -213,38 +85,41 @@ func main() {
 
 	partSize, err := strconv.Atoi(os.Args[3])
 	if err != nil {
-		usageE("Could not convert third argument to int...")
+		usageE(os.NewError("Could not convert third argument to int."))
 		os.Exit(1)
 	}
 
-	in, err := NewImageData(os.Args[1], 0, 0)
+	in, err := LoadImageFile(os.Args[1])
 	if err != nil {
-		usageE(err.String())
+		usageE(err)
 		os.Exit(1)
 	}
 
-	out, err := NewImageData("", in.Bounds().Dx(), in.Bounds().Dy())
-	if err != nil {
-		usageE(err.String())
-		os.Exit(1)
+	parts := in.Bounds().Dx() / partSize
+	if (in.Bounds().Dx() % partSize) != 0 {
+		parts++
 	}
-	err = out.SetFileName(os.Args[2])
+
+	out, err := NewImageFile(os.Args[2], in.Bounds().Dx(), in.Bounds().Dy())
 	if err != nil {
-		usageE(err.String())
+		usageE(err)
 		os.Exit(1)
 	}
 
-	pat, err := NewImageData("", partSize, out.Bounds().Dy())
+	pat, err := NewRandPat("", partSize, out.Bounds().Dy())
 	if err != nil {
-		usageE(err.String())
+		usageE(err)
 		os.Exit(1)
 	}
 
 	fmt.Printf("Generating SIRDS...\n")
-	pat.MakeRandPat(0, 0, pat.Bounds().Dx(), pat.Bounds().Dy())
-	for part := 0; part < (in.Bounds().Dx() / partSize); part++ {
+	genLoop: for part := 0; part < parts; part++ {
 		for y := 0; y < out.Bounds().Dy(); y++ {
 			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
+				if outX > out.Bounds().Dx() {
+					break genLoop
+				}
+
 				inX := outX - partSize
 
 				if inX < 0 {
