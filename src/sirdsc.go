@@ -19,8 +19,8 @@ const(
 )
 
 const(
-	JPG = iota
-	PNG = iota
+	JPG = iota + 1
+	PNG
 )
 
 func usageE(err string) {
@@ -127,12 +127,7 @@ func (img *ImageData)MakeRandPat(x, y, w, h int) {
 
 	for y = sy; y < h; y++ {
 		for x = sx; x < w; x++ {
-			cv := reflect.NewValue(img.Image.At(0, 0))
-			if cv.Type().Kind() == reflect.Interface {
-				cv = reflect.Indirect(cv.Elem())
-			}
-
-			c := randomColor(cv.Type())
+			c := randomColor()
 
 			img.Set(x, y, c)
 		}
@@ -141,26 +136,23 @@ func (img *ImageData)MakeRandPat(x, y, w, h int) {
 
 func (img *ImageData)Set(x, y int, c image.Color) {
 	v := reflect.NewValue(img.Image)
-	if v.Type().Kind() == reflect.Interface {
-		v = reflect.Indirect(v.Elem())
-	}
 
-	cv := reflect.NewValue(c)
-	if cv.Type().Kind() == reflect.Interface {
-		cv = reflect.Indirect(cv.Elem())
-	}
+	c = img.Image.ColorModel().Convert(c)
 
 	args := []reflect.Value{
 		v,
 		reflect.NewValue(x),
 		reflect.NewValue(y),
-		cv,
 	}
 
 	t := v.Type()
 	for i := 0; i < t.NumMethod(); i++ {
 		m := t.Method(i)
 		if m.Name == "Set" {
+			cv := reflect.Zero(m.Type.In(3))
+			cv.Set(reflect.NewValue(c))
+			args = append(args, cv)
+
 			m.Func.Call(args)
 			return
 		}
@@ -192,25 +184,21 @@ func depthFromColor(c image.Color) (d int) {
 	return d
 }
 
-func randomColor(t reflect.Type) (image.Color) {
-	c := reflect.Zero(t)
-	c.FieldByName("R").Set(reflect.NewValue((uint8)(rand.Uint32())))
-	c.FieldByName("G").Set(reflect.NewValue((uint8)(rand.Uint32())))
-	c.FieldByName("B").Set(reflect.NewValue((uint8)(rand.Uint32())))
-	c.FieldByName("A").Set(reflect.NewValue(255))
+func randomColor() (image.Color) {
+	c := image.RGBAColor{
+		R: (uint8)(rand.Uint32()),
+		G: (uint8)(rand.Uint32()),
+		B: (uint8)(rand.Uint32()),
+		A: 255,
+	}
 
-	return c.Interface().(image.Color)
+	return c
 }
 
 func copyAndCheckPixel(in *ImageData, in2 *ImageData, inX, inY int, out *ImageData, outX, outY int) {
 	depth := depthFromColor(in.At(inX, inY))
 
-	cv := reflect.NewValue(out.Image.At(0, 0))
-	if cv.Type().Kind() == reflect.Interface {
-		cv = reflect.Indirect(cv.Elem())
-	}
-
-	out.Set(outX, outY, randomColor(cv.Type()))
+	out.Set(outX, outY, randomColor())
 
 	if outX - depth >= 0 {
 		out.Set(outX - depth, outY, in2.At(inX, inY))
