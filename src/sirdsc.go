@@ -10,10 +10,6 @@ import(
 )
 
 const(
-	MaxDepth = 10
-)
-
-const(
 	JPG = iota + 1
 	PNG
 )
@@ -44,13 +40,13 @@ func usage() {
 //	return false
 //}
 
-func depthFromColor(c image.Color) (d int) {
+func depthFromColor(c image.Color, max int) (d int) {
 	r, g, b, _ := c.RGBA()
 
 	v := math.Fmax(float64(g), math.Fmax(float64(b), float64(r)))
-	//d = int(v * MaxDepth / float64(math.MaxUint32))
+	//d = int(v * max / float64(math.MaxUint32))
 	if v != 0 {
-		return 5
+		return max
 	}
 
 	return d
@@ -65,16 +61,6 @@ func randomColor() (image.Color) {
 	}
 
 	return c
-}
-
-func copyAndCheckPixel(in *ImageFile, in2 *ImageFile, inX, inY int, out *ImageFile, outX, outY int) {
-	depth := depthFromColor(in.At(inX, inY))
-
-	out.Set(outX, outY, randomColor())
-
-	if outX - depth >= 0 {
-		out.Set(outX - depth, outY, in2.At(inX, inY))
-	}
 }
 
 func main() {
@@ -100,7 +86,7 @@ func main() {
 		parts++
 	}
 
-	out, err := NewImageFile(os.Args[2], in.Bounds().Dx(), in.Bounds().Dy())
+	out, err := NewImageFile(os.Args[2], in.Bounds().Dx() + partSize, in.Bounds().Dy())
 	if err != nil {
 		usageE(err)
 		os.Exit(1)
@@ -113,7 +99,7 @@ func main() {
 	}
 
 	fmt.Printf("Generating SIRDS...\n")
-	for part := 0; part < parts; part++ {
+	for part := 0; part < parts + 1; part++ {
 		for y := 0; y < out.Bounds().Dy(); y++ {
 			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
 				if outX > out.Bounds().Dx() {
@@ -121,18 +107,25 @@ func main() {
 				}
 
 				inX := outX - partSize
+				depth := depthFromColor(in.At(inX, y), 10)
+
+				out.Set(outX, y, randomColor())
 
 				if inX < 0 {
-					copyAndCheckPixel(in, pat, outX, y, out, outX, y)
+					if outX - depth >= 0 {
+						out.Set(outX - depth, y, pat.At(outX, y))
+					}
 				} else {
-					copyAndCheckPixel(in, out, inX, y, out, outX, y)
+					if outX - depth >= 0 {
+						out.Set(outX - depth, y, out.At(inX, y))
+					}
 				}
 			}
 		}
 	}
 
 	fmt.Printf("Writing SIRDS...\n")
-	out.Save()
+	realOut.Save()
 
 	fmt.Printf("Done...\n")
 }

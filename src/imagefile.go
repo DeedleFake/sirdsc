@@ -67,6 +67,24 @@ func LoadImageFile(file string) (img *ImageFile, err os.Error) {
 	return
 }
 
+func CopyImageFile(src *ImageFile, slice image.Rectangle) (img *ImageFile, err os.Error) {
+	img, err = NewImageFile(src.FileName(), slice.Dx(), slice.Dy())
+	if err != nil {
+		return
+	}
+
+	for inY := slice.Min.Y; inY < slice.Max.Y; inY++ {
+		for inX := slice.Min.X; inX < slice.Max.X; inX++ {
+			outX := inX - slice.Min.X
+			outY := inY - slice.Min.Y
+
+			img.Set(outX, outY, src.At(inX, inY))
+		}
+	}
+
+	return
+}
+
 func NewRandPat(file string, w, h int) (img *ImageFile, err os.Error) {
 	img, err = NewImageFile(file, w, h)
 	if err != nil {
