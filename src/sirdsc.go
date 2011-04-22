@@ -3,10 +3,10 @@ package main
 import(
 	"os"
 	"fmt"
+	"flag"
 	"rand"
 	"math"
 	"image"
-	"strconv"
 )
 
 const(
@@ -14,19 +14,24 @@ const(
 	PNG
 )
 
-func usageE(err fmt.Stringer) {
-	fmt.Printf("\033[0;41mError:\033[m %s\n", err)
-	fmt.Printf("---------------------------\n\n")
-
-	usage()
+func init() {
+	flag.Usage = func() {
+		fmt.Printf("Usage: %v [options] <src> <dest>\n", os.Args[0])
+		fmt.Printf("\nOptions:\n")
+		flag.PrintDefaults()
+		fmt.Printf("\nParameters:\n")
+		fmt.Printf("  src: Heightmap image\n")
+		fmt.Printf("  dest: Output image file\n")
+	}
 }
 
-func usage() {
-	fmt.Printf("\033[0;1mUsage:\033[m\n")
-	fmt.Printf("\t%s <src> <dst> <part-size>\n\n", os.Args[0])
-	fmt.Printf("\t\tsrc: A Jpeg or PNG file.\n")
-	fmt.Printf("\t\tdst: A PNG file.\n")
-	fmt.Printf("\t\tpart-size: The width of each section of the SIRDS.\n")
+func usage(err fmt.Stringer) {
+	if err != nil {
+		fmt.Printf("Error: %v\n", err) //\033[0;41m\033[m
+		fmt.Printf("---------------------------\n\n")
+	}
+
+	flag.Usage()
 }
 
 //func colorsAreEqual(c, c2 image.Color) (bool) {
@@ -64,20 +69,31 @@ func randomColor() (image.Color) {
 }
 
 func main() {
-	if len(os.Args) != 4 {
-		usage()
+	var(
+		partSize int
+		maxDepth int
+	)
+	flag.IntVar(&partSize, "partsize", 100, "Size of sections in the SIRDS")
+	flag.IntVar(&maxDepth, "depth", 10, "Maximum depth")
+	flag.Parse()
+	args := flag.Args()
+	if len(args) != 2 {
+		usage(nil)
 		os.Exit(1)
 	}
+	inFile := args[0]
+	outFile := args[1]
 
-	partSize, err := strconv.Atoi(os.Args[3])
-	if err != nil {
-		usageE(os.NewError("Could not convert third argument to int."))
-		os.Exit(1)
-	}
+	fmt.Printf("Options:\n")
+	fmt.Printf("  partsize: %v\n", partSize)
+	fmt.Printf("  depth: %v\n", maxDepth)
+	fmt.Printf("  src: %v\n", inFile)
+	fmt.Printf("  dest: %v\n", outFile)
+	fmt.Printf("\n")
 
-	in, err := LoadImageFile(os.Args[1])
+	in, err := LoadImageFile(inFile)
 	if err != nil {
-		usageE(err)
+		usage(err)
 		os.Exit(1)
 	}
 
@@ -86,15 +102,15 @@ func main() {
 		parts++
 	}
 
-	out, err := NewImageFile(os.Args[2], in.Bounds().Dx() + partSize, in.Bounds().Dy())
+	out, err := NewImageFile(outFile, in.Bounds().Dx() + partSize, in.Bounds().Dy())
 	if err != nil {
-		usageE(err)
+		usage(err)
 		os.Exit(1)
 	}
 
 	pat, err := NewRandPat("", partSize, out.Bounds().Dy())
 	if err != nil {
-		usageE(err)
+		usage(err)
 		os.Exit(1)
 	}
 
@@ -107,7 +123,7 @@ func main() {
 				}
 
 				inX := outX - partSize
-				depth := depthFromColor(in.At(inX, y), 10)
+				depth := depthFromColor(in.At(inX, y), maxDepth)
 
 				out.Set(outX, y, randomColor())
 
@@ -125,7 +141,7 @@ func main() {
 	}
 
 	fmt.Printf("Writing SIRDS...\n")
-	realOut.Save()
+	out.Save()
 
 	fmt.Printf("Done...\n")
 }
