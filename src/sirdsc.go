@@ -85,8 +85,8 @@ func main() {
 	outFile := args[1]
 
 	fmt.Printf("Options:\n")
-	fmt.Printf("  partsize: %v\n", partSize)
 	fmt.Printf("  depth: %v\n", maxDepth)
+	fmt.Printf("  partsize: %v\n", partSize)
 	fmt.Printf("  src: %v\n", inFile)
 	fmt.Printf("  dest: %v\n", outFile)
 	fmt.Printf("\n")
