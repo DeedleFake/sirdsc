@@ -113,11 +113,11 @@ func main() {
 	}
 
 	fmt.Printf("Generating SIRDS...\n")
-	genLoop: for part := 0; part < parts; part++ {
+	for part := 0; part < parts; part++ {
 		for y := 0; y < out.Bounds().Dy(); y++ {
 			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
 				if outX > out.Bounds().Dx() {
-					break genLoop
+					break
 				}
 
 				inX := outX - partSize
