@@ -45,16 +45,18 @@ func usage(err fmt.Stringer) {
 //	return false
 //}
 
-func depthFromColor(c image.Color, max int) (d int) {
+func depthFromColor(c image.Color, max uint64) (d uint64) {
 	r, g, b, _ := c.RGBA()
 
 	v := math.Fmax(float64(g), math.Fmax(float64(b), float64(r)))
-	//d = int(v * max / float64(math.MaxUint32))
-	if v != 0 {
-		return max
-	}
+	d = uint64(v * float64(max) / math.MaxFloat64)
+	fmt.Printf("%v: %v\n", v, d)
 
-	return d
+	//if v != 0 {
+	//	return max
+	//}
+
+	return
 }
 
 func randomColor() (image.Color) {
@@ -71,10 +73,10 @@ func randomColor() (image.Color) {
 func main() {
 	var(
 		partSize int
-		maxDepth int
+		maxDepth uint64
 	)
 	flag.IntVar(&partSize, "partsize", 100, "Size of sections in the SIRDS")
-	flag.IntVar(&maxDepth, "depth", 10, "Maximum depth")
+	flag.Uint64Var(&maxDepth, "depth", 10, "Maximum depth")
 	flag.Parse()
 	args := flag.Args()
 	if len(args) != 2 {
@@ -128,12 +130,12 @@ func main() {
 				out.Set(outX, y, randomColor())
 
 				if inX < 0 {
-					if outX - depth >= 0 {
-						out.Set(outX - depth, y, pat.At(outX, y))
+					if uint64(outX) - depth >= 0 {
+						out.Set(int(uint64(outX) - depth), y, pat.At(outX, y))
 					}
 				} else {
-					if outX - depth >= 0 {
-						out.Set(outX - depth, y, out.At(inX, y))
+					if uint64(outX) - depth >= 0 {
+						out.Set(int(uint64(outX) - depth), y, out.At(inX, y))
 					}
 				}
 			}
