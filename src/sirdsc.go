@@ -110,6 +110,7 @@ func main() {
 	}
 	out.SetJPEGOptions(&jpegOpt)
 
+	fmt.Printf("Generating Random Pattern...\n")
 	pat, err := NewRandPat("", partSize, out.Bounds().Dy())
 	if err != nil {
 		usage(err)
@@ -145,5 +146,5 @@ func main() {
 	fmt.Printf("Writing SIRDS...\n")
 	out.Save()
 
-	fmt.Printf("Done...\n")
+	fmt.Printf("Done.\n")
 }
