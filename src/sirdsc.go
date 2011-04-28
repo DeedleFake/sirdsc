@@ -7,11 +7,7 @@ import(
 	"rand"
 	"math"
 	"image"
-)
-
-const(
-	JPG = iota + 1
-	PNG
+	"image/jpeg"
 )
 
 func init() {
@@ -49,12 +45,12 @@ func depthFromColor(c image.Color, max uint64) (d uint64) {
 	r, g, b, _ := c.RGBA()
 
 	v := math.Fmax(float64(g), math.Fmax(float64(b), float64(r)))
-	d = uint64(v * float64(max) / math.MaxFloat64)
-	fmt.Printf("%v: %v\n", v, d)
+	//d = uint64(v * float64(max) / math.MaxFloat64)
+	//fmt.Printf("%v: %v\n", v, d)
 
-	//if v != 0 {
-	//	return max
-	//}
+	if v != 0 {
+		return max
+	}
 
 	return
 }
@@ -74,9 +70,11 @@ func main() {
 	var(
 		partSize int
 		maxDepth uint64
+		jpegOpt jpeg.Options
 	)
 	flag.IntVar(&partSize, "partsize", 100, "Size of sections in the SIRDS")
 	flag.Uint64Var(&maxDepth, "depth", 10, "Maximum depth")
+	flag.IntVar(&jpegOpt.Quality, "jpeg:quality", 95, "Quality of output JPEG image")
 	flag.Parse()
 	args := flag.Args()
 	if len(args) != 2 {
@@ -89,6 +87,7 @@ func main() {
 	fmt.Printf("Options:\n")
 	fmt.Printf("  depth: %v\n", maxDepth)
 	fmt.Printf("  partsize: %v\n", partSize)
+	fmt.Printf("  jpeg:quality: %v\n", jpegOpt.Quality)
 	fmt.Printf("  src: %v\n", inFile)
 	fmt.Printf("  dest: %v\n", outFile)
 	fmt.Printf("\n")
@@ -109,6 +108,7 @@ func main() {
 		usage(err)
 		os.Exit(1)
 	}
+	out.SetJPEGOptions(&jpegOpt)
 
 	pat, err := NewRandPat("", partSize, out.Bounds().Dy())
 	if err != nil {

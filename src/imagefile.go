@@ -10,11 +10,18 @@ import(
 	"image/jpeg"
 )
 
+const(
+	JPG = iota + 1
+	PNG
+)
+
 type ImageFile struct {
 	image.Image
 
 	FileType int
 	fileName string
+
+	jpegOpt *jpeg.Options
 }
 
 func NewImageFile(file string, w, h int) (img *ImageFile, err os.Error) {
@@ -137,6 +144,8 @@ func (img *ImageFile)Save() (err os.Error) {
 	switch img.FileType {
 		case PNG:
 			png.Encode(fl, img)
+		case JPG:
+			jpeg.Encode(fl, img, img.jpegOpt)
 		default:
 			return os.NewError("Image format can't be saved to...")
 	}
@@ -145,22 +154,22 @@ func (img *ImageFile)Save() (err os.Error) {
 }
 
 func (img *ImageFile)Set(x, y int, c image.Color) {
-	v := reflect.NewValue(img.Image)
+	v := reflect.ValueOf(img.Image)
 
 	c = img.Image.ColorModel().Convert(c)
 
 	args := []reflect.Value{
 		v,
-		reflect.NewValue(x),
-		reflect.NewValue(y),
+		reflect.ValueOf(x),
+		reflect.ValueOf(y),
 	}
 
 	t := v.Type()
 	for i := 0; i < t.NumMethod(); i++ {
 		m := t.Method(i)
 		if m.Name == "Set" {
-			cv := reflect.Zero(m.Type.In(3))
-			cv.Set(reflect.NewValue(c))
+			cv := reflect.New(m.Type.In(3)).Elem()
+			cv.Set(reflect.ValueOf(c))
 			args = append(args, cv)
 
 			m.Func.Call(args)
@@ -169,4 +178,8 @@ func (img *ImageFile)Set(x, y int, c image.Color) {
 	}
 
 	panic("no 'Set' method")
+}
+
+func (img *ImageFile)SetJPEGOptions(opt *jpeg.Options) {
+	img.jpegOpt = opt
 }
