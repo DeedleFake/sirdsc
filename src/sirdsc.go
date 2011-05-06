@@ -42,11 +42,14 @@ func usage(err fmt.Stringer) {
 //}
 
 func depthFromColor(c image.Color, max uint64) (uint64) {
-	r, g, b, _ := c.RGBA()
+	c = image.RGBAColorModel.Convert(c)
+	tr, tg, tb, _ := c.RGBA()
+	r := uint8(tr)
+	g := uint8(tg)
+	b := uint8(tb)
 
 	v := math.Fmax(float64(g), math.Fmax(float64(b), float64(r)))
-	d := v * float64(max) / 255
-	fmt.Printf("%v: %v\n", v, d)
+	d := v * float64(max) / math.MaxUint8
 
 	//if v != 0 {
 	//	return max
