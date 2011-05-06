@@ -30,17 +30,6 @@ func usage(err fmt.Stringer) {
 	flag.Usage()
 }
 
-//func colorsAreEqual(c, c2 image.Color) (bool) {
-//	cR, cG, cB, cA := c.RGBA()
-//	c2R, c2G, c2B, c2A := c2.RGBA()
-//
-//	if (cR == c2R) && (cG == c2G) && (cB == c2B) && (cA == c2A) {
-//		return true
-//	}
-//
-//	return false
-//}
-
 func depthFromColor(c image.Color, max int) (int) {
 	c = image.RGBAColorModel.Convert(c)
 	tr, tg, tb, _ := c.RGBA()
@@ -50,10 +39,6 @@ func depthFromColor(c image.Color, max int) (int) {
 
 	v := math.Fmax(float64(g), math.Fmax(float64(b), float64(r)))
 	d := v * float64(max) / math.MaxUint8
-
-	//if v != 0 {
-	//	return max
-	//}
 
 	return int(d)
 }
