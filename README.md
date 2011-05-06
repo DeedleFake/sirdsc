@@ -23,17 +23,17 @@ The default prefix is '/usr'. If you want to install sirdsc with a different pre
 Usage
 -----
 
-> sirdsc [options] <src> <dest>
+> sirdsc [options] &lt;src&gt; &lt;dest&gt;
 
-Where <src> is an existing height-map file in a supported format, and <dest> is the file to which to write the generated file.
+Where &lt;src&gt; is an existing height-map file in a supported format, and &lt;dest&gt; is the file to which to write the generated file.
 
 ### Options ###
 
 sirdsc accepts the following options:
 
- * -partsize=<int> (Default: 100)
+ * -partsize=&lt;int&gt; (Default: 100)
    > The size of the individual parts of the generated SIRDS. The generated image will be this many pixels wider than the height-map.
- * -depth=<int> (Default: 10)
+ * -depth=&lt;int&gt; (Default: 10)
    > The maximum depth of the image pixels.
 
 The following options only apply if the destination file is a JPEG:
