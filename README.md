@@ -40,7 +40,7 @@ sirdsc accepts the following options:
 
 The following options only apply if the destination file is a JPEG:
 
- * -jpeg:quality (Default: 95)
+ * -jpeg:quality=&lt;int&gt; (Default: 95)
    > The quality of the output JPEG file as a percentage.
 
 Authors
