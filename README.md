@@ -44,7 +44,7 @@ The following options only apply if the destination file is a JPEG:
 Authors
 -------
 
- * DeedleFake
+ * [DeedleFake](/DeedleFake)
 
 [sirds]: http://www.wikipedia.com/wiki/SIRDS
 [golang]: http://www.golang.org
