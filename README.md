@@ -18,7 +18,9 @@ Run the following commands:
 
 The default prefix is '/usr'. If you want to install sirdsc with a different prefix, simply run the following:
 
-> make PREFIX="your desired prefix" install
+> make PREFIX=&lt;your desired prefix&gt; install
+
+Be sure to replace &lt;your desired prefix&gt; with whatever your desired prefix is.
 
 Usage
 -----
