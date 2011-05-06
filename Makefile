@@ -1,6 +1,16 @@
-include $(GOROOT)/src/Make.inc
+TARGET=sirdsc
 
-TARG=sirdsc
-GOFILES=$(wildcard src/*.go)
+SRCDIR=src
 
-include $(GOROOT)/src/Make.cmd
+PREFIX=/usr
+
+.PHONY: all install clean
+
+all:
+	gomake -C src
+
+install: all
+	install -m 755 -D "$(SRCDIR)/$(TARGET)" "$(PREFIX)/bin/$(TARGET)"
+
+clean:
+	gomake -C src $@
