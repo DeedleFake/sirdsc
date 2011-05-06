@@ -6,8 +6,10 @@ PREFIX=/usr
 
 .PHONY: all install clean
 
-all:
-	gomake -C src
+all: $(TARGET)
+
+$(TARGET):
+	gomake -C src $@
 
 install: all
 	install -m 755 -D "$(SRCDIR)/$(TARGET)" "$(PREFIX)/bin/$(TARGET)"

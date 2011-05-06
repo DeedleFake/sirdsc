@@ -1,7 +1,7 @@
 sirdsc
 ======
 
-sirdsc is a simple that converts height-maps into single image random dot stereograms ([SIRDS][sirds])
+sirdsc is a simple that converts height-maps into single image random dot stereograms ([SIRDS][sirds]).
 
 Prerequisites
 -------------
