@@ -30,7 +30,7 @@ func usage(err fmt.Stringer) {
 	flag.Usage()
 }
 
-func depthFromColor(c image.Color, max int) (int) {
+func depthFromColor(c image.Color, max int, flat bool) (int) {
 	c = image.RGBAColorModel.Convert(c)
 	tr, tg, tb, _ := c.RGBA()
 	r := uint8(tr)
@@ -39,6 +39,10 @@ func depthFromColor(c image.Color, max int) (int) {
 
 	v := math.Fmax(float64(g), math.Fmax(float64(b), float64(r)))
 	d := v * float64(max) / math.MaxUint8
+
+	if (flat) && (d != 0) {
+		return max
+	}
 
 	return int(d)
 }
@@ -56,12 +60,14 @@ func randomColor() (image.Color) {
 
 func main() {
 	var(
+		flat bool
 		partSize int
 		maxDepth int
 		jpegOpt jpeg.Options
 	)
 	flag.IntVar(&partSize, "partsize", 100, "Size of sections in the SIRDS")
 	flag.IntVar(&maxDepth, "depth", 40, "Maximum depth")
+	flag.BoolVar(&flat, "flat", false, "Generate a flat image")
 	flag.IntVar(&jpegOpt.Quality, "jpeg:quality", 95, "Quality of output JPEG image")
 	flag.Parse()
 	args := flag.Args()
@@ -74,6 +80,7 @@ func main() {
 
 	fmt.Printf("Options:\n")
 	fmt.Printf("  depth: %v\n", maxDepth)
+	fmt.Printf("  flat: %v\n", flat)
 	fmt.Printf("  partsize: %v\n", partSize)
 	fmt.Printf("  jpeg:quality: %v\n", jpegOpt.Quality)
 	fmt.Printf("  src: %v\n", inFile)
@@ -114,7 +121,7 @@ func main() {
 				}
 
 				inX := outX - partSize
-				depth := depthFromColor(in.At(inX, y), maxDepth)
+				depth := depthFromColor(in.At(inX, y), maxDepth, flat)
 
 				out.Set(outX, y, randomColor())
 
