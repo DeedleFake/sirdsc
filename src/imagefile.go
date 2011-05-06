@@ -6,19 +6,13 @@ import(
 	"reflect"
 	"strings"
 	"image"
-	"image/png"
 	"image/jpeg"
-)
-
-const(
-	JPG = iota + 1
-	PNG
 )
 
 type ImageFile struct {
 	image.Image
 
-	FileType int
+	FileType ImageType
 	fileName string
 
 	jpegOpt *jpeg.Options
@@ -56,19 +50,9 @@ func LoadImageFile(file string) (img *ImageFile, err os.Error) {
 	}
 	defer fl.Close()
 
-	switch img.FileType {
-		case JPG:
-			tmpImage, err := jpeg.Decode(fl)
-			if err != nil {
-				return
-			}
-			img.Image = tmpImage
-		case PNG:
-			tmpImage, err := png.Decode(fl)
-			if err != nil {
-				return
-			}
-			img.Image = tmpImage
+	img.Image, err = img.FileType.Load(fl)
+	if err != nil {
+		return
 	}
 
 	return
@@ -137,17 +121,13 @@ func (img *ImageFile)Save() (err os.Error) {
 
 	fl, err := os.Create(img.FileName())
 	if err != nil {
-		return err
+		return
 	}
 	defer fl.Close()
 
-	switch img.FileType {
-		case PNG:
-			png.Encode(fl, img)
-		case JPG:
-			jpeg.Encode(fl, img, img.jpegOpt)
-		default:
-			return os.NewError("Image format can't be saved to...")
+	err = img.FileType.Save(fl, img, img.jpegOpt)
+	if err != nil {
+		return
 	}
 
 	return nil
