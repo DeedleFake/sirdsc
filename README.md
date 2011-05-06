@@ -37,8 +37,8 @@ sirdsc accepts the following options:
     <dt>-partsize=&lt;int&gt; (Default: 100)</dt>
     <dd>The size of the individual parts of the generated SIRDS. The generated image will be this many pixels wider than the height-map.M.</dd>
 
-    <dt>-depth=&lt;int&gt; (Default: 10)</dt>
-    <dd>The maximum depth of the image pixels.</dd>
+    <dt>-depth=&lt;int&gt; (Default: 40)</dt>
+    <dd>A solid white pixel in the height-map results in this depth.</dd>
 </dl>
 
 The following options only apply if the destination file is a JPEG:

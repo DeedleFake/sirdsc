@@ -41,7 +41,7 @@ func usage(err fmt.Stringer) {
 //	return false
 //}
 
-func depthFromColor(c image.Color, max uint64) (uint64) {
+func depthFromColor(c image.Color, max int) (int) {
 	c = image.RGBAColorModel.Convert(c)
 	tr, tg, tb, _ := c.RGBA()
 	r := uint8(tr)
@@ -55,7 +55,7 @@ func depthFromColor(c image.Color, max uint64) (uint64) {
 	//	return max
 	//}
 
-	return uint64(d)
+	return int(d)
 }
 
 func randomColor() (image.Color) {
@@ -72,11 +72,11 @@ func randomColor() (image.Color) {
 func main() {
 	var(
 		partSize int
-		maxDepth uint64
+		maxDepth int
 		jpegOpt jpeg.Options
 	)
 	flag.IntVar(&partSize, "partsize", 100, "Size of sections in the SIRDS")
-	flag.Uint64Var(&maxDepth, "depth", 10, "Maximum depth")
+	flag.IntVar(&maxDepth, "depth", 40, "Maximum depth")
 	flag.IntVar(&jpegOpt.Quality, "jpeg:quality", 95, "Quality of output JPEG image")
 	flag.Parse()
 	args := flag.Args()
@@ -134,12 +134,12 @@ func main() {
 				out.Set(outX, y, randomColor())
 
 				if inX < 0 {
-					if uint64(outX) - depth >= 0 {
-						out.Set(int(uint64(outX) - depth), y, pat.At(outX, y))
+					if outX - depth >= 0 {
+						out.Set(outX - depth, y, pat.At(outX, y))
 					}
 				} else {
-					if uint64(outX) - depth >= 0 {
-						out.Set(int(uint64(outX) - depth), y, out.At(inX, y))
+					if outX - depth >= 0 {
+						out.Set(outX - depth, y, out.At(inX, y))
 					}
 				}
 			}
