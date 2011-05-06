@@ -34,18 +34,18 @@ Where &lt;src&gt; is an existing height-map file in a supported format, and &lt;
 sirdsc accepts the following options:
 
 <dl>
-  <dt>-partsize=&lt;int&gt; (Default: 100)</dt>
-  <dd>The size of the individual parts of the generated SIRDS. The generated image will be this many pixels wider than the height-map.M.</dd>
+    <dt>-partsize=&lt;int&gt; (Default: 100)</dt>
+    <dd>The size of the individual parts of the generated SIRDS. The generated image will be this many pixels wider than the height-map.M.</dd>
 
-  <dt>-depth=&lt;int&gt; (Default: 10)</dt>
-  <dd>The maximum depth of the image pixels.</dd>
+    <dt>-depth=&lt;int&gt; (Default: 10)</dt>
+    <dd>The maximum depth of the image pixels.</dd>
 </dl>
 
 The following options only apply if the destination file is a JPEG:
 
 <dl>
-  <dt>-jpeg:quality=&lt;int&gt; (Default: 95)</dt>
-  <dd>The quality of the output JPEG file as a percentage.</dd>
+    <dt>-jpeg:quality=&lt;int&gt; (Default: 95)</dt>
+    <dd>The quality of the output JPEG file as a percentage.</dd>
 </dl>
 
 Authors
@@ -56,4 +56,6 @@ Authors
 [sirds]: http://www.wikipedia.com/wiki/SIRDS
 [golang]: http://www.golang.org
 
-<!-- vim:ts=2 sw=2 et -->
+<!--
+    vim:ts=4 sw=4 et
+-->
