@@ -41,18 +41,18 @@ func usage(err fmt.Stringer) {
 //	return false
 //}
 
-func depthFromColor(c image.Color, max uint64) (d uint64) {
+func depthFromColor(c image.Color, max uint64) (uint64) {
 	r, g, b, _ := c.RGBA()
 
 	v := math.Fmax(float64(g), math.Fmax(float64(b), float64(r)))
-	//d = uint64(v * float64(max) / math.MaxFloat64)
-	//fmt.Printf("%v: %v\n", v, d)
+	d := v * float64(max) / 255
+	fmt.Printf("%v: %v\n", v, d)
 
-	if v != 0 {
-		return max
-	}
+	//if v != 0 {
+	//	return max
+	//}
 
-	return
+	return uint64(d)
 }
 
 func randomColor() (image.Color) {
