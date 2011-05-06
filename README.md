@@ -33,19 +33,16 @@ Where &lt;src&gt; is an existing height-map file in a supported format, and &lt;
 
 sirdsc accepts the following options:
 
- * -partsize=&lt;int&gt; (Default: 100)
+> -partsize=&lt;int&gt; (Default: 100)
+> > The size of the individual parts of the generated SIRDS. The generated image will be this many pixels wider than the height-map.
 
-    > The size of the individual parts of the generated SIRDS. The generated image will be this many pixels wider than the height-map.
-
- * -depth=&lt;int&gt; (Default: 10)
-
-    > The maximum depth of the image pixels.
+> -depth=&lt;int&gt; (Default: 10)
+> > The maximum depth of the image pixels.
 
 The following options only apply if the destination file is a JPEG:
 
- * -jpeg:quality=&lt;int&gt; (Default: 95)
-
-    > The quality of the output JPEG file as a percentage.
+> -jpeg:quality=&lt;int&gt; (Default: 95)
+> > The quality of the output JPEG file as a percentage.
 
 Authors
 -------
