@@ -35,16 +35,17 @@ sirdsc accepts the following options:
 
  * -partsize=&lt;int&gt; (Default: 100)
 
-    The size of the individual parts of the generated SIRDS. The generated image will be this many pixels wider than the height-map.
+    > The size of the individual parts of the generated SIRDS. The generated image will be this many pixels wider than the height-map.
 
  * -depth=&lt;int&gt; (Default: 10)
-    The maximum depth of the image pixels.
+
+    > The maximum depth of the image pixels.
 
 The following options only apply if the destination file is a JPEG:
 
  * -jpeg:quality=&lt;int&gt; (Default: 95)
 
-    The quality of the output JPEG file as a percentage.
+    > The quality of the output JPEG file as a percentage.
 
 Authors
 -------
@@ -53,3 +54,5 @@ Authors
 
 [sirds]: http://www.wikipedia.com/wiki/SIRDS
 [golang]: http://www.golang.org
+
+# vim:ts=2 sw=2 et
