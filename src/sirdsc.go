@@ -58,16 +58,54 @@ func randomColor() (image.Color) {
 	return c
 }
 
+type Config struct {
+	MaxDepth int
+	Flat bool
+}
+
+func GenerateSIRDS(out *ImageFile, in *ImageFile, pat *ImageFile, config Config) {
+	partSize := pat.Bounds().Dx()
+
+	parts := in.Bounds().Dx() / partSize
+	if (in.Bounds().Dx() % partSize) != 0 {
+		parts++
+	}
+
+	for part := 0; part < parts + 1; part++ {
+		for y := 0; y < out.Bounds().Dy(); y++ {
+			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
+				if outX > out.Bounds().Dx() {
+					break
+				}
+
+				inX := outX - partSize
+				depth := depthFromColor(in.At(inX, y), config.MaxDepth, config.Flat)
+
+				out.Set(outX, y, randomColor())
+
+				if inX < 0 {
+					if outX - depth >= 0 {
+						out.Set(outX - depth, y, pat.At(outX, y))
+					}
+				} else {
+					if outX - depth >= 0 {
+						out.Set(outX - depth, y, out.At(inX, y))
+					}
+				}
+			}
+		}
+	}
+}
+
 func main() {
 	var(
-		flat bool
 		partSize int
-		maxDepth int
 		jpegOpt jpeg.Options
+		config Config
 	)
 	flag.IntVar(&partSize, "partsize", 100, "Size of sections in the SIRDS")
-	flag.IntVar(&maxDepth, "depth", 40, "Maximum depth")
-	flag.BoolVar(&flat, "flat", false, "Generate a flat image")
+	flag.IntVar(&config.MaxDepth, "depth", 40, "Maximum depth")
+	flag.BoolVar(&config.Flat, "flat", false, "Generate a flat image")
 	flag.IntVar(&jpegOpt.Quality, "jpeg:quality", 95, "Quality of output JPEG image")
 	flag.Parse()
 	args := flag.Args()
@@ -79,8 +117,8 @@ func main() {
 	outFile := args[1]
 
 	fmt.Printf("Options:\n")
-	fmt.Printf("  depth: %v\n", maxDepth)
-	fmt.Printf("  flat: %v\n", flat)
+	fmt.Printf("  depth: %v\n", config.MaxDepth)
+	fmt.Printf("  flat: %v\n", config.Flat)
 	fmt.Printf("  partsize: %v\n", partSize)
 	fmt.Printf("  jpeg:quality: %v\n", jpegOpt.Quality)
 	fmt.Printf("  src: %v\n", inFile)
@@ -91,11 +129,6 @@ func main() {
 	if err != nil {
 		usage(err)
 		os.Exit(1)
-	}
-
-	parts := in.Bounds().Dx() / partSize
-	if (in.Bounds().Dx() % partSize) != 0 {
-		parts++
 	}
 
 	out, err := NewImageFile(outFile, in.Bounds().Dx() + partSize, in.Bounds().Dy())
@@ -113,30 +146,7 @@ func main() {
 	}
 
 	fmt.Printf("Generating SIRDS...\n")
-	for part := 0; part < parts + 1; part++ {
-		for y := 0; y < out.Bounds().Dy(); y++ {
-			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
-				if outX > out.Bounds().Dx() {
-					break
-				}
-
-				inX := outX - partSize
-				depth := depthFromColor(in.At(inX, y), maxDepth, flat)
-
-				out.Set(outX, y, randomColor())
-
-				if inX < 0 {
-					if outX - depth >= 0 {
-						out.Set(outX - depth, y, pat.At(outX, y))
-					}
-				} else {
-					if outX - depth >= 0 {
-						out.Set(outX - depth, y, out.At(inX, y))
-					}
-				}
-			}
-		}
-	}
+	GenerateSIRDS(out, in, pat, config)
 
 	fmt.Printf("Writing SIRDS...\n")
 	out.Save()
