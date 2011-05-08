@@ -87,14 +87,14 @@ func GenerateSIRDS(out *ImageFile, in *ImageFile, pat *ImageFile, config Config)
 				inX := outX - partSize
 				depth := depthFromColor(in.At(inX, y), config.MaxDepth, config.Flat)
 
-				out.Set(outX, y, randomColor())
-
 				if inX < 0 {
 					if outX - depth >= 0 {
+						out.Set(outX, y, patTile.At(outX, y))
 						out.Set(outX - depth, y, patTile.At(outX, y))
 					}
 				} else {
 					if outX - depth >= 0 {
+						out.Set(outX, y, out.At(inX, y))
 						out.Set(outX - depth, y, out.At(inX, y))
 					}
 				}
