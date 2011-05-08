@@ -42,6 +42,9 @@ sirdsc accepts the following options:
 
     <dt>-flat (Default: false)</dt>
     <dd>If specified, treat any non-black pixels as having the maximum depth.</dd>
+
+    <dt>-pat=&lt;string&gt; (Default: "")</dt>
+    <dd>If not equal to "", use the file specified as the pattern instead of generating a random one. If this is used, the width of the file specified is used as the partsize, regardless of whether or not -partsize was specified.
 </dl>
 
 The following options only apply if the destination file is a JPEG:

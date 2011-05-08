@@ -64,6 +64,8 @@ type Config struct {
 }
 
 func GenerateSIRDS(out *ImageFile, in *ImageFile, pat *ImageFile, config Config) {
+	patTile := image.NewTiled(pat.Image, image.ZP)
+
 	partSize := pat.Bounds().Dx()
 
 	parts := in.Bounds().Dx() / partSize
@@ -85,7 +87,7 @@ func GenerateSIRDS(out *ImageFile, in *ImageFile, pat *ImageFile, config Config)
 
 				if inX < 0 {
 					if outX - depth >= 0 {
-						out.Set(outX - depth, y, pat.At(outX, y))
+						out.Set(outX - depth, y, patTile.At(outX, y))
 					}
 				} else {
 					if outX - depth >= 0 {
@@ -102,11 +104,13 @@ func main() {
 		partSize int
 		jpegOpt jpeg.Options
 		config Config
+		patFile string
 	)
 	flag.IntVar(&partSize, "partsize", 100, "Size of sections in the SIRDS")
 	flag.IntVar(&config.MaxDepth, "depth", 40, "Maximum depth")
 	flag.BoolVar(&config.Flat, "flat", false, "Generate a flat image")
 	flag.IntVar(&jpegOpt.Quality, "jpeg:quality", 95, "Quality of output JPEG image")
+	flag.StringVar(&patFile, "pat", "", "Custom pattern")
 	flag.Parse()
 	args := flag.Args()
 	if len(args) != 2 {
@@ -123,6 +127,11 @@ func main() {
 	fmt.Printf("  jpeg:quality: %v\n", jpegOpt.Quality)
 	fmt.Printf("  src: %v\n", inFile)
 	fmt.Printf("  dest: %v\n", outFile)
+	if patFile == "" {
+		fmt.Printf("  pat: Random\n")
+	} else {
+		fmt.Printf("  pat: %v\n", patFile)
+	}
 	fmt.Printf("\n")
 
 	in, err := LoadImageFile(inFile)
@@ -138,11 +147,21 @@ func main() {
 	}
 	out.SetJPEGOptions(&jpegOpt)
 
-	fmt.Printf("Generating Random Pattern...\n")
-	pat, err := NewRandPat("", partSize, out.Bounds().Dy())
-	if err != nil {
-		usage(err)
-		os.Exit(1)
+	var pat *ImageFile
+	if patFile == "" {
+		fmt.Printf("Generating random pattern...\n")
+		pat, err = NewRandPat("", partSize, out.Bounds().Dy())
+		if err != nil {
+			usage(err)
+			os.Exit(1)
+		}
+	} else {
+		fmt.Printf("Loading pattern...\n")
+		pat, err = LoadImageFile(patFile)
+		if err != nil {
+			usage(err)
+			os.Exit(1)
+		}
 	}
 
 	fmt.Printf("Generating SIRDS...\n")
