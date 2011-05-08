@@ -35,7 +35,7 @@ sirdsc accepts the following options:
 
 <dl>
     <dt>-partsize=&lt;int&gt; (Default: 100)</dt>
-    <dd>The size of the individual parts of the generated SIRDS. The generated image will be this many pixels wider than the height-map.M.</dd>
+    <dd>The size of the individual parts of the generated SIRDS. The generated image will be this many pixels wider than the height-map. If -partsize is set to 0 and used in conjuction with -pat it will be automatically detected from the width of the specified custom pattern.</dd>
 
     <dt>-depth=&lt;int&gt; (Default: 40)</dt>
     <dd>The maximum depth. A solid white pixel in the height-map results in this depth.</dd>
@@ -44,7 +44,7 @@ sirdsc accepts the following options:
     <dd>If specified, treat any non-black pixels as having the maximum depth.</dd>
 
     <dt>-pat=&lt;string&gt; (Default: "")</dt>
-    <dd>If not equal to "", use the file specified as the pattern instead of generating a random one. If this is used, the width of the file specified is used as the partsize, regardless of whether or not -partsize was specified.
+    <dd>If not equal to "", use the file specified as the pattern instead of generating a random one. To have -partsize automatically detected based on the width of the specified file, use -partsize=0.</dd>
 </dl>
 
 The following options only apply if the destination file is a JPEG:
