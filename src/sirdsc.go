@@ -179,7 +179,11 @@ func main() {
 	GenerateSIRDS(out, in, pat, config)
 
 	fmt.Printf("Writing SIRDS...\n")
-	out.Save()
+	err = out.Save(os.Stdout, os.Stdin)
+	if err != nil {
+		fmt.Printf("Error: Couldn't save: %v\n", err)
+		os.Exit(1)
+	}
 
 	fmt.Printf("Done.\n")
 }

@@ -4,8 +4,16 @@ import(
 	"os"
 	"io"
 	"image"
+	"image/bmp"
+	"image/gif"
 	"image/png"
 	"image/jpeg"
+	"image/tiff"
+)
+
+var(
+	ENOLOAD = os.NewError("Image format can't be loaded...")
+	ENOSAVE = os.NewError("Image format can't be saved to...")
 )
 
 type LoadFunc func(io.Reader) (image.Image, os.Error)
@@ -18,7 +26,7 @@ type ImageType struct {
 
 func (it ImageType)Load(r io.Reader) (img image.Image, err os.Error) {
 	if it.LoadFunc == nil {
-		return nil, os.NewError("Image format can't be loaded...")
+		return nil, ENOLOAD
 	}
 
 	img, err = it.LoadFunc(r)
@@ -28,7 +36,7 @@ func (it ImageType)Load(r io.Reader) (img image.Image, err os.Error) {
 
 func (it ImageType)Save(w io.Writer, img image.Image, data interface{}) (err os.Error) {
 	if it.SaveFunc == nil {
-		return os.NewError("Image format can't be saved to...")
+		return ENOSAVE
 	}
 
 	err = it.SaveFunc(w, img, data)
@@ -57,6 +65,30 @@ var PNG = ImageType{
 	},
 	SaveFunc: func(w io.Writer, img image.Image, ignored interface{}) (err os.Error) {
 		err = png.Encode(w, img)
+
+		return
+	},
+}
+
+var BMP = ImageType{
+	LoadFunc: func(r io.Reader) (img image.Image, err os.Error) {
+		img, err = bmp.Decode(r)
+
+		return
+	},
+}
+
+var GIF = ImageType{
+	LoadFunc: func(r io.Reader) (img image.Image, err os.Error) {
+		img, err = gif.Decode(r)
+
+		return
+	},
+}
+
+var TIFF = ImageType{
+	LoadFunc: func(r io.Reader) (img image.Image, err os.Error) {
+		img, err = tiff.Decode(r)
 
 		return
 	},

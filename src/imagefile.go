@@ -2,11 +2,18 @@ package main
 
 import(
 	"os"
+	"io"
+	"fmt"
 	"path"
+	"bytes"
 	"reflect"
 	"strings"
 	"image"
 	"image/jpeg"
+)
+
+var(
+	ETOLDNO = os.NewError("Told not to save file.")
 )
 
 type ImageFile struct {
@@ -100,6 +107,12 @@ func (img *ImageFile)SetFileName(file string) (err os.Error) {
 				img.FileType = JPG
 			case ".png":
 				img.FileType = PNG
+			case ".bmp":
+				img.FileType = BMP
+			case ".gif":
+				img.FileType = GIF
+			case ".tif", ".tiff":
+				img.FileType = TIFF
 			default:
 				return os.NewError("Image format not supported or could not be detected...")
 		}
@@ -114,9 +127,38 @@ func (img *ImageFile)FileName() (string) {
 	return img.fileName
 }
 
-func (img *ImageFile)Save() (err os.Error) {
+func (img *ImageFile)Save(askout io.Writer, askin io.Reader) (err os.Error) {
 	if img.FileName() == "" {
 		return os.NewError("No associated file...")
+	}
+
+	var rem bool
+	_, err = os.Stat(img.FileName())
+	if err != nil {
+		err2, ok := err.(*os.PathError)
+		if !ok {
+			return
+		}
+
+		if err2.Error == os.ENOENT {
+			rem = true
+		}
+	} else {
+		if (askin != nil) && (askout != nil) {
+			_, err = fmt.Fprintf(askout, "Overwrite %v? [y/N] ", img.FileName())
+			if err != nil {
+				return
+			}
+
+			ans := make([]byte, 1)
+			n, err := askin.Read(ans)
+			if err != nil {
+				return
+			}
+			if (n == 0) || (bytes.ToLower(ans)[0] != 'y') {
+				return ETOLDNO
+			}
+		}
 	}
 
 	fl, err := os.Create(img.FileName())
@@ -127,6 +169,10 @@ func (img *ImageFile)Save() (err os.Error) {
 
 	err = img.FileType.Save(fl, img, img.jpegOpt)
 	if err != nil {
+		if (err == ENOSAVE) && rem {
+			os.Remove(img.FileName())
+		}
+
 		return
 	}
 
