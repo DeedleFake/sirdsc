@@ -17,7 +17,7 @@ var(
 )
 
 type ImageFile struct {
-	image.Image
+	draw.Image
 
 	FileType ImageType
 	fileName string
@@ -34,8 +34,7 @@ func NewImageFile(file string, w, h int) (img *ImageFile, err os.Error) {
 	}
 
 	if (w <= 0) || (h <= 0) {
-		err = os.NewError("Bad dimensions...")
-		return
+		return nil, os.NewError("Bad dimensions")
 	}
 
 	img.Image = image.NewRGBA(w, h)
@@ -177,15 +176,6 @@ func (img *ImageFile)Save(askout io.Writer, askin io.Reader) (err os.Error) {
 	}
 
 	return nil
-}
-
-func (img *ImageFile)Set(x, y int, c image.Color) {
-	if di, ok := img.Image.(draw.Image); ok {
-		di.Set(x, y, c)
-		return
-	}
-
-	panic("no 'Set' method")
 }
 
 func (img *ImageFile)SetJPEGOptions(opt *jpeg.Options) {

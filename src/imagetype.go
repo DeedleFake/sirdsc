@@ -9,6 +9,7 @@ import(
 	"image/png"
 	"image/jpeg"
 	"image/tiff"
+	"image/draw"
 )
 
 var(
@@ -24,17 +25,23 @@ type ImageType struct {
 	SaveFunc SaveFunc
 }
 
-func (it ImageType)Load(r io.Reader) (img image.Image, err os.Error) {
+func (it ImageType)Load(r io.Reader) (img draw.Image, err os.Error) {
 	if it.LoadFunc == nil {
 		return nil, ENOLOAD
 	}
 
-	img, err = it.LoadFunc(r)
+	tmp, err := it.LoadFunc(r)
+	if err != nil {
+		return
+	}
 
-	return
+	if img, ok := tmp.(draw.Image); ok {
+		return img, nil
+	}
+	return nil, os.NewError("Couldn't load image: Does not satisfy draw.Image")
 }
 
-func (it ImageType)Save(w io.Writer, img image.Image, data interface{}) (err os.Error) {
+func (it ImageType)Save(w io.Writer, img draw.Image, data interface{}) (err os.Error) {
 	if it.SaveFunc == nil {
 		return ENOSAVE
 	}
