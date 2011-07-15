@@ -6,10 +6,10 @@ import(
 	"fmt"
 	"path"
 	"bytes"
-	"reflect"
 	"strings"
 	"image"
 	"image/jpeg"
+	"image/draw"
 )
 
 var(
@@ -180,22 +180,8 @@ func (img *ImageFile)Save(askout io.Writer, askin io.Reader) (err os.Error) {
 }
 
 func (img *ImageFile)Set(x, y int, c image.Color) {
-	v := reflect.ValueOf(img.Image)
-
-	c = img.Image.ColorModel().Convert(c)
-
-	args := []reflect.Value{
-		v,
-		reflect.ValueOf(x),
-		reflect.ValueOf(y),
-	}
-
-	if m, ok := v.Type().MethodByName("Set"); ok {
-		cv := reflect.New(m.Type.In(3)).Elem()
-		cv.Set(reflect.ValueOf(c))
-		args = append(args, cv)
-
-		m.Func.Call(args)
+	if di, ok := img.Image.(draw.Image); ok {
+		di.Set(x, y, c)
 		return
 	}
 
