@@ -190,17 +190,13 @@ func (img *ImageFile)Set(x, y int, c image.Color) {
 		reflect.ValueOf(y),
 	}
 
-	t := v.Type()
-	for i := 0; i < t.NumMethod(); i++ {
-		m := t.Method(i)
-		if m.Name == "Set" {
-			cv := reflect.New(m.Type.In(3)).Elem()
-			cv.Set(reflect.ValueOf(c))
-			args = append(args, cv)
+	if m, ok := v.Type().MethodByName("Set"); ok {
+		cv := reflect.New(m.Type.In(3)).Elem()
+		cv.Set(reflect.ValueOf(c))
+		args = append(args, cv)
 
-			m.Func.Call(args)
-			return
-		}
+		m.Func.Call(args)
+		return
 	}
 
 	panic("no 'Set' method")
