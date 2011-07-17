@@ -1,6 +1,6 @@
 package main
 
-import(
+import (
 	"os"
 	"io"
 	"fmt"
@@ -12,7 +12,7 @@ import(
 	"image/draw"
 )
 
-var(
+var (
 	ETOLDNO = os.NewError("Told not to save file.")
 )
 
@@ -99,21 +99,21 @@ func NewRandPat(file string, w, h int) (img *ImageFile, err os.Error) {
 	return
 }
 
-func (img *ImageFile)SetFileName(file string) (err os.Error) {
+func (img *ImageFile) SetFileName(file string) (err os.Error) {
 	if file != "" {
 		switch strings.ToLower(path.Ext(file)) {
-			case ".jpg", ".jpeg":
-				img.FileType = JPG
-			case ".png":
-				img.FileType = PNG
-			case ".bmp":
-				img.FileType = BMP
-			case ".gif":
-				img.FileType = GIF
-			case ".tif", ".tiff":
-				img.FileType = TIFF
-			default:
-				return os.NewError("Image format not supported or could not be detected...")
+		case ".jpg", ".jpeg":
+			img.FileType = JPG
+		case ".png":
+			img.FileType = PNG
+		case ".bmp":
+			img.FileType = BMP
+		case ".gif":
+			img.FileType = GIF
+		case ".tif", ".tiff":
+			img.FileType = TIFF
+		default:
+			return os.NewError("Image format not supported or could not be detected...")
 		}
 	}
 
@@ -122,11 +122,11 @@ func (img *ImageFile)SetFileName(file string) (err os.Error) {
 	return nil
 }
 
-func (img *ImageFile)FileName() (string) {
+func (img *ImageFile) FileName() string {
 	return img.fileName
 }
 
-func (img *ImageFile)Save(askout io.Writer, askin io.Reader) (err os.Error) {
+func (img *ImageFile) Save(askout io.Writer, askin io.Reader) (err os.Error) {
 	if img.FileName() == "" {
 		return os.NewError("No associated file...")
 	}
@@ -178,6 +178,6 @@ func (img *ImageFile)Save(askout io.Writer, askin io.Reader) (err os.Error) {
 	return nil
 }
 
-func (img *ImageFile)SetJPEGOptions(opt *jpeg.Options) {
+func (img *ImageFile) SetJPEGOptions(opt *jpeg.Options) {
 	img.jpegOpt = opt
 }

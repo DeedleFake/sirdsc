@@ -1,6 +1,6 @@
 package main
 
-import(
+import (
 	"os"
 	"io"
 	"image"
@@ -12,20 +12,20 @@ import(
 	"image/draw"
 )
 
-var(
+var (
 	ENOLOAD = os.NewError("Image format can't be loaded...")
 	ENOSAVE = os.NewError("Image format can't be saved to...")
 )
 
 type LoadFunc func(io.Reader) (image.Image, os.Error)
-type SaveFunc func(io.Writer, image.Image, interface{}) (os.Error)
+type SaveFunc func(io.Writer, image.Image, interface{}) os.Error
 
 type ImageType struct {
 	LoadFunc LoadFunc
 	SaveFunc SaveFunc
 }
 
-func (it ImageType)Load(r io.Reader) (img draw.Image, err os.Error) {
+func (it ImageType) Load(r io.Reader) (img draw.Image, err os.Error) {
 	if it.LoadFunc == nil {
 		return nil, ENOLOAD
 	}
@@ -41,7 +41,7 @@ func (it ImageType)Load(r io.Reader) (img draw.Image, err os.Error) {
 	return nil, os.NewError("Couldn't load image: Does not satisfy draw.Image")
 }
 
-func (it ImageType)Save(w io.Writer, img draw.Image, data interface{}) (err os.Error) {
+func (it ImageType) Save(w io.Writer, img draw.Image, data interface{}) (err os.Error) {
 	if it.SaveFunc == nil {
 		return ENOSAVE
 	}

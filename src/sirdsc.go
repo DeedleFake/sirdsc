@@ -1,6 +1,6 @@
 package main
 
-import(
+import (
 	"os"
 	"fmt"
 	"flag"
@@ -30,7 +30,7 @@ func usage(err fmt.Stringer) {
 	flag.Usage()
 }
 
-func depthFromColor(c image.Color, max int, flat bool) (int) {
+func depthFromColor(c image.Color, max int, flat bool) int {
 	c = image.RGBAColorModel.Convert(c)
 	tr, tg, tb, _ := c.RGBA()
 	r := uint8(tr)
@@ -47,7 +47,7 @@ func depthFromColor(c image.Color, max int, flat bool) (int) {
 	return int(d)
 }
 
-func randomColor() (image.Color) {
+func randomColor() image.Color {
 	c := image.RGBAColor{
 		R: (uint8)(rand.Uint32()),
 		G: (uint8)(rand.Uint32()),
@@ -60,7 +60,7 @@ func randomColor() (image.Color) {
 
 type Config struct {
 	MaxDepth int
-	Flat bool
+	Flat     bool
 	PartSize uint
 }
 
@@ -77,9 +77,9 @@ func GenerateSIRDS(out *ImageFile, in *ImageFile, pat *ImageFile, config Config)
 		parts++
 	}
 
-	for part := 0; part < parts + 1; part++ {
+	for part := 0; part < parts+1; part++ {
 		for y := 0; y < out.Bounds().Dy(); y++ {
-			for outX := part * partSize; outX < (part + 1) * partSize; outX++ {
+			for outX := part * partSize; outX < (part+1)*partSize; outX++ {
 				if outX > out.Bounds().Dx() {
 					break
 				}
@@ -88,14 +88,14 @@ func GenerateSIRDS(out *ImageFile, in *ImageFile, pat *ImageFile, config Config)
 				depth := depthFromColor(in.At(inX, y), config.MaxDepth, config.Flat)
 
 				if inX < 0 {
-					if outX - depth >= 0 {
+					if outX-depth >= 0 {
 						out.Set(outX, y, patTile.At(outX, y))
-						out.Set(outX - depth, y, patTile.At(outX, y))
+						out.Set(outX-depth, y, patTile.At(outX, y))
 					}
 				} else {
-					if outX - depth >= 0 {
+					if outX-depth >= 0 {
 						out.Set(outX, y, out.At(inX, y))
-						out.Set(outX - depth, y, out.At(inX, y))
+						out.Set(outX-depth, y, out.At(inX, y))
 					}
 				}
 			}
@@ -104,9 +104,9 @@ func GenerateSIRDS(out *ImageFile, in *ImageFile, pat *ImageFile, config Config)
 }
 
 func main() {
-	var(
+	var (
 		jpegOpt jpeg.Options
-		config Config
+		config  Config
 		patFile string
 	)
 	flag.UintVar(&config.PartSize, "partsize", 100, "Size of sections in the SIRDS")
@@ -168,7 +168,7 @@ func main() {
 		}
 	}
 
-	out, err := NewImageFile(outFile, in.Bounds().Dx() + pat.Bounds().Dx(), in.Bounds().Dy())
+	out, err := NewImageFile(outFile, in.Bounds().Dx()+pat.Bounds().Dx(), in.Bounds().Dy())
 	if err != nil {
 		usage(err)
 		os.Exit(1)

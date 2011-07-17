@@ -4,3 +4,8 @@ TARG=sirdsc
 GOFILES=$(wildcard *.go)
 
 include $(GOROOT)/src/Make.cmd
+
+.PHONY: fmt
+
+fmt:
+	gofmt -w $(GOFILES)
