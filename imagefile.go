@@ -1,19 +1,20 @@
 package main
 
 import (
-	"os"
-	"io"
-	"fmt"
-	"path"
 	"bytes"
-	"strings"
+	"errors"
+	"fmt"
 	"image"
-	"image/jpeg"
 	"image/draw"
+	"image/jpeg"
+	"io"
+	"os"
+	"path"
+	"strings"
 )
 
 var (
-	ETOLDNO = os.NewError("Told not to save file.")
+	ETOLDNO = errors.New("Told not to save file.")
 )
 
 type ImageFile struct {
@@ -25,7 +26,7 @@ type ImageFile struct {
 	jpegOpt *jpeg.Options
 }
 
-func NewImageFile(file string, w, h int) (img *ImageFile, err os.Error) {
+func NewImageFile(file string, w, h int) (img *ImageFile, err error) {
 	img = new(ImageFile)
 
 	err = img.SetFileName(file)
@@ -34,15 +35,15 @@ func NewImageFile(file string, w, h int) (img *ImageFile, err os.Error) {
 	}
 
 	if (w <= 0) || (h <= 0) {
-		return nil, os.NewError("Bad dimensions")
+		return nil, errors.New("Bad dimensions")
 	}
 
-	img.Image = image.NewRGBA(w, h)
+	img.Image = image.NewRGBA(image.Rect(0, 0, w, h))
 
 	return
 }
 
-func LoadImageFile(file string) (img *ImageFile, err os.Error) {
+func LoadImageFile(file string) (img *ImageFile, err error) {
 	img = new(ImageFile)
 
 	err = img.SetFileName(file)
@@ -64,7 +65,7 @@ func LoadImageFile(file string) (img *ImageFile, err os.Error) {
 	return
 }
 
-func CopyImageFile(src *ImageFile, slice image.Rectangle) (img *ImageFile, err os.Error) {
+func CopyImageFile(src *ImageFile, slice image.Rectangle) (img *ImageFile, err error) {
 	img, err = NewImageFile(src.FileName(), slice.Dx(), slice.Dy())
 	if err != nil {
 		return
@@ -82,7 +83,7 @@ func CopyImageFile(src *ImageFile, slice image.Rectangle) (img *ImageFile, err o
 	return
 }
 
-func NewRandPat(file string, w, h int) (img *ImageFile, err os.Error) {
+func NewRandPat(file string, w, h int) (img *ImageFile, err error) {
 	img, err = NewImageFile(file, w, h)
 	if err != nil {
 		return
@@ -99,21 +100,17 @@ func NewRandPat(file string, w, h int) (img *ImageFile, err os.Error) {
 	return
 }
 
-func (img *ImageFile) SetFileName(file string) (err os.Error) {
+func (img *ImageFile) SetFileName(file string) (err error) {
 	if file != "" {
 		switch strings.ToLower(path.Ext(file)) {
 		case ".jpg", ".jpeg":
 			img.FileType = JPG
 		case ".png":
 			img.FileType = PNG
-		case ".bmp":
-			img.FileType = BMP
 		case ".gif":
 			img.FileType = GIF
-		case ".tif", ".tiff":
-			img.FileType = TIFF
 		default:
-			return os.NewError("Image format not supported or could not be detected...")
+			return errors.New("Image format not supported or could not be detected...")
 		}
 	}
 
@@ -126,9 +123,9 @@ func (img *ImageFile) FileName() string {
 	return img.fileName
 }
 
-func (img *ImageFile) Save(askout io.Writer, askin io.Reader) (err os.Error) {
+func (img *ImageFile) Save(askout io.Writer, askin io.Reader) (err error) {
 	if img.FileName() == "" {
-		return os.NewError("No associated file...")
+		return errors.New("No associated file...")
 	}
 
 	var rem bool
@@ -139,7 +136,7 @@ func (img *ImageFile) Save(askout io.Writer, askin io.Reader) (err os.Error) {
 			return
 		}
 
-		if err2.Error == os.ENOENT {
+		if os.IsNotExist(err2) {
 			rem = true
 		}
 	} else {
@@ -152,7 +149,7 @@ func (img *ImageFile) Save(askout io.Writer, askin io.Reader) (err os.Error) {
 			ans := make([]byte, 1)
 			n, err := askin.Read(ans)
 			if err != nil {
-				return
+				return err
 			}
 			if (n == 0) || (bytes.ToLower(ans)[0] != 'y') {
 				return ETOLDNO

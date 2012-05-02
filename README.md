@@ -11,16 +11,13 @@ Prerequisites
 Installation
 ------------
 
-Run the following commands:
+Run the following command:
 
-    make
-    make install
+    go get github.com/DeedleFake/sirdsc
 
-The default prefix is '/usr'. If you want to install sirdsc with a different prefix, simply run the following:
+This will install the command 'sirdsc' into your GOPATH. For more information, run:
 
-    make PREFIX=<your desired prefix> install
-
-Be sure to replace &lt;your desired prefix&gt; with whatever your desired prefix is.
+    go help gopath
 
 Usage
 -----

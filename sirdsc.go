@@ -1,13 +1,16 @@
 package main
 
 import (
-	"os"
-	"fmt"
+	crand "crypto/rand"
+	"encoding/binary"
+	"errors"
 	"flag"
-	"rand"
-	"math"
-	"image"
+	"fmt"
+	"image/color"
 	"image/jpeg"
+	"math"
+	"math/rand"
+	"os"
 )
 
 func init() {
@@ -19,9 +22,17 @@ func init() {
 		fmt.Printf("  src: Heightmap image\n")
 		fmt.Printf("  dest: Output image file\n")
 	}
+
+	var r int64
+	err := binary.Read(crand.Reader, binary.LittleEndian, &r)
+	if err != nil {
+		fmt.Printf("Warning: Unable to seed random number generator: %v\n", err)
+	} else {
+		rand.Seed(r)
+	}
 }
 
-func usage(err fmt.Stringer) {
+func usageErr(err error) {
 	if err != nil {
 		fmt.Printf("Error: %v\n", err) //\033[0;41m\033[m
 		fmt.Printf("---------------------------\n\n")
@@ -30,14 +41,14 @@ func usage(err fmt.Stringer) {
 	flag.Usage()
 }
 
-func depthFromColor(c image.Color, max int, flat bool) int {
-	c = image.RGBAColorModel.Convert(c)
+func depthFromColor(c color.Color, max int, flat bool) int {
+	c = color.RGBAModel.Convert(c)
 	tr, tg, tb, _ := c.RGBA()
 	r := uint8(tr)
 	g := uint8(tg)
 	b := uint8(tb)
 
-	v := math.Fmax(float64(g), math.Fmax(float64(b), float64(r)))
+	v := math.Max(float64(g), math.Max(float64(b), float64(r)))
 	d := v * float64(max) / math.MaxUint8
 
 	if (flat) && (d != 0) {
@@ -47,8 +58,8 @@ func depthFromColor(c image.Color, max int, flat bool) int {
 	return int(d)
 }
 
-func randomColor() image.Color {
-	c := image.RGBAColor{
+func randomColor() color.Color {
+	c := color.RGBA{
 		R: (uint8)(rand.Uint32()),
 		G: (uint8)(rand.Uint32()),
 		B: (uint8)(rand.Uint32()),
@@ -65,7 +76,7 @@ type Config struct {
 }
 
 func GenerateSIRDS(out *ImageFile, in *ImageFile, pat *ImageFile, config Config) {
-	patTile := image.NewTiled(pat.Image, image.ZP)
+	patTile := TiledImage{pat.Image}
 
 	partSize := int(config.PartSize)
 	if partSize == 0 {
@@ -117,7 +128,7 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 	if len(args) != 2 {
-		usage(nil)
+		usageErr(nil)
 		os.Exit(1)
 	}
 	inFile := args[0]
@@ -143,7 +154,7 @@ func main() {
 
 	in, err := LoadImageFile(inFile)
 	if err != nil {
-		usage(err)
+		usageErr(err)
 		os.Exit(1)
 	}
 
@@ -151,26 +162,26 @@ func main() {
 	if patFile == "" {
 		fmt.Printf("Generating random pattern...\n")
 		if config.PartSize == 0 {
-			usage(os.NewError("-partsize=0 but no -pat"))
+			usageErr(errors.New("-partsize=0 but no -pat"))
 			os.Exit(1)
 		}
 		pat, err = NewRandPat("", int(config.PartSize), in.Bounds().Dy())
 		if err != nil {
-			usage(err)
+			usageErr(err)
 			os.Exit(1)
 		}
 	} else {
 		fmt.Printf("Loading pattern...\n")
 		pat, err = LoadImageFile(patFile)
 		if err != nil {
-			usage(err)
+			usageErr(err)
 			os.Exit(1)
 		}
 	}
 
 	out, err := NewImageFile(outFile, in.Bounds().Dx()+pat.Bounds().Dx(), in.Bounds().Dy())
 	if err != nil {
-		usage(err)
+		usageErr(err)
 		os.Exit(1)
 	}
 	out.SetJPEGOptions(&jpegOpt)
