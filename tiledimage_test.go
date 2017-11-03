@@ -2,15 +2,35 @@ package sirdsc_test
 
 import (
 	"image"
+	"image/color"
 	"testing"
 
 	"github.com/DeedleFake/sirdsc"
 )
 
+type subImage struct {
+	img  image.Image
+	rect image.Rectangle
+}
+
+func (img subImage) ColorModel() color.Model {
+	return img.img.ColorModel()
+}
+
+func (img subImage) Bounds() image.Rectangle {
+	return img.rect
+}
+
+func (img subImage) At(x, y int) color.Color {
+	return img.img.At(x, y)
+}
+
 func TestTiledImage(t *testing.T) {
 	img := sirdsc.TiledImage{
-		Image: sirdsc.RandImage(1),
-		Rect:  image.Rect(0, 0, 5, 5),
+		Image: subImage{
+			img:  sirdsc.RandImage(1),
+			rect: image.Rect(0, 0, 5, 5),
+		},
 	}
 
 	c1 := img.At(0, 0)

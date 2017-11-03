@@ -5,30 +5,26 @@ import (
 	"image/color"
 )
 
-// A TiledImage tiles a region of an image. Any pixel values outside
-// of the rectangle specified are wrapped so that they come from
-// inside that rectangle in the original image.
+// A TiledImage extends another image by tiling it infinitely in every
+// direction.
 type TiledImage struct {
-	Image image.Image
-	Rect  image.Rectangle
+	image.Image
 }
 
 func (img TiledImage) c(x, y int) (int, int) {
-	x = (x-img.Rect.Min.X)%img.Rect.Dx() + img.Rect.Min.X
+	b := img.Image.Bounds()
+
+	x = (x-b.Min.X)%b.Dx() + b.Min.X
 	if x < 0 {
-		x += img.Rect.Dx()
+		x += b.Dx()
 	}
 
-	y = (y-img.Rect.Min.Y)%img.Rect.Dy() + img.Rect.Min.Y
+	y = (y-b.Min.Y)%b.Dy() + b.Min.Y
 	if y < 0 {
-		y += img.Rect.Dy()
+		y += b.Dy()
 	}
 
 	return x, y
-}
-
-func (img TiledImage) ColorModel() color.Model {
-	return img.Image.ColorModel()
 }
 
 func (img TiledImage) Bounds() image.Rectangle {

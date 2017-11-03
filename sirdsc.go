@@ -53,7 +53,6 @@ func Generate(out draw.Image, dm image.Image, pat image.Image, config *Config) {
 
 	pat = TiledImage{
 		Image: pat,
-		Rect:  pat.Bounds(),
 	}
 
 	parts := dm.Bounds().Dx() / partSize
