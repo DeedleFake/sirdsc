@@ -4,9 +4,15 @@ import (
 	"flag"
 	"fmt"
 	"image"
+	_ "image/gif"
+	_ "image/jpeg"
 	"image/png"
 	"os"
 	"time"
+
+	_ "golang.org/x/image/bmp"
+	_ "golang.org/x/image/tiff"
+	_ "golang.org/x/image/webp"
 
 	"github.com/DeedleFake/sirdsc"
 )
