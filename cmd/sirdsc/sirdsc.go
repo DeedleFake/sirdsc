@@ -81,7 +81,13 @@ func main() {
 		}
 	}
 
-	out := image.NewNRGBA(in.Bounds())
+	inb := in.Bounds()
+	out := image.NewNRGBA(image.Rect(
+		inb.Min.X,
+		inb.Min.Y,
+		inb.Max.X+config.PartSize,
+		inb.Max.Y,
+	))
 	sirdsc.Generate(out, in, pat, &config)
 
 	err = saveImage(outFile, out)
