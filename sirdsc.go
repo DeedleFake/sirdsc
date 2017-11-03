@@ -24,6 +24,7 @@ var DefaultConfig = &Config{
 }
 
 func depthFromColor(c color.Color, max int, flat bool) int {
+	c = color.RGBAModel.Convert(c)
 	tr, tg, tb, _ := c.RGBA()
 	r := uint8(tr)
 	g := uint8(tg)
