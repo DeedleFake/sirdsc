@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"image/draw"
 	"math"
+	"sync"
 )
 
 // A Config specifies extra options for SIRDS generation.
@@ -60,9 +61,13 @@ func Generate(out draw.Image, dm image.Image, pat image.Image, config *Config) {
 		parts++
 	}
 
-	for part := 0; part < parts+1; part++ {
-		for y := 0; y < out.Bounds().Dy(); y++ {
-			for x := part * partSize; (x < (part+1)*partSize) && (x < out.Bounds().Dx()); x++ {
+	var wg sync.WaitGroup
+	wg.Add(out.Bounds().Dy())
+	for y := 0; y < out.Bounds().Dy(); y++ {
+		go func(y int) {
+			defer wg.Done()
+
+			for x := 0; x < out.Bounds().Dx(); x++ {
 				depth := depthFromColor(dm.At(x-partSize, y), config.MaxDepth, config.Flat)
 				if config.Inverse {
 					depth = config.MaxDepth - depth
@@ -80,6 +85,7 @@ func Generate(out draw.Image, dm image.Image, pat image.Image, config *Config) {
 					out.Set(x-depth, y, c)
 				}
 			}
-		}
+		}(y)
 	}
+	wg.Wait()
 }
