@@ -9,14 +9,26 @@ import (
 // of the rectangle specified are wrapped so that they come from
 // inside that rectangle in the original image.
 type TiledImage struct {
-	image.Image
-	image.Rectangle
+	Image image.Image
+	Rect  image.Rectangle
 }
 
 func (img TiledImage) c(x, y int) (int, int) {
-	x = (x-img.Min.X)%img.Dx() + img.Min.X
-	y = (y-img.Min.Y)%img.Dy() + img.Min.Y
+	x = (x-img.Rect.Min.X)%img.Rect.Dx() + img.Rect.Min.X
+	if x < 0 {
+		x += img.Rect.Dx()
+	}
+
+	y = (y-img.Rect.Min.Y)%img.Rect.Dy() + img.Rect.Min.Y
+	if y < 0 {
+		y += img.Rect.Dy()
+	}
+
 	return x, y
+}
+
+func (img TiledImage) ColorModel() color.Model {
+	return img.Image.ColorModel()
 }
 
 func (img TiledImage) Bounds() image.Rectangle {

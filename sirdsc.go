@@ -23,7 +23,6 @@ var DefaultConfig = &Config{
 }
 
 func depthFromColor(c color.Color, max int, flat bool) int {
-	c = color.RGBAModel.Convert(c)
 	tr, tg, tb, _ := c.RGBA()
 	r := uint8(tr)
 	g := uint8(tg)
@@ -52,9 +51,9 @@ func Generate(out draw.Image, dm image.Image, pat image.Image, config *Config) {
 		partSize = pat.Bounds().Dx()
 	}
 
-	patTile := TiledImage{
-		Image:     pat,
-		Rectangle: image.Rect(0, 0, out.Bounds().Dy(), partSize),
+	pat = TiledImage{
+		Image: pat,
+		Rect:  pat.Bounds(),
 	}
 
 	parts := dm.Bounds().Dx() / partSize
@@ -64,27 +63,22 @@ func Generate(out draw.Image, dm image.Image, pat image.Image, config *Config) {
 
 	for part := 0; part < parts+1; part++ {
 		for y := 0; y < out.Bounds().Dy(); y++ {
-			for outX := part * partSize; outX < (part+1)*partSize; outX++ {
-				if outX > out.Bounds().Dx() {
-					break
-				}
-
-				inX := outX - partSize
-				depth := depthFromColor(dm.At(inX, y), config.MaxDepth, config.Flat)
+			for x := part * partSize; (x < (part+1)*partSize) && (x < out.Bounds().Dx()); x++ {
+				depth := depthFromColor(dm.At(x-partSize, y), config.MaxDepth, config.Flat)
 				if config.Inverse {
 					depth = config.MaxDepth - depth
 				}
 
-				if inX < 0 {
-					if outX-depth >= 0 {
-						out.Set(outX, y, patTile.At(outX, y))
-						out.Set(outX-depth, y, patTile.At(outX, y))
-					}
-				} else {
-					if outX-depth >= 0 {
-						out.Set(outX, y, out.At(inX, y))
-						out.Set(outX-depth, y, out.At(inX, y))
-					}
+				src := pat
+				if x-partSize >= 0 {
+					src = out
+				}
+
+				if x-depth >= 0 {
+					c := src.At(x-partSize, y)
+
+					out.Set(x, y, c)
+					out.Set(x-depth, y, c)
 				}
 			}
 		}
