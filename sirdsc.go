@@ -1,44 +1,25 @@
-package main
+package sirdsc
 
 import (
-	crand "crypto/rand"
-	"encoding/binary"
-	"errors"
-	"flag"
-	"fmt"
+	"image"
 	"image/color"
-	"image/jpeg"
+	"image/draw"
 	"math"
-	"math/rand"
-	"os"
 )
 
-func init() {
-	flag.Usage = func() {
-		fmt.Printf("Usage: %v [options] <src> <dest>\n", os.Args[0])
-		fmt.Printf("\nOptions:\n")
-		flag.PrintDefaults()
-		fmt.Printf("\nParameters:\n")
-		fmt.Printf("  src: Heightmap image\n")
-		fmt.Printf("  dest: Output image file\n")
-	}
-
-	var r int64
-	err := binary.Read(crand.Reader, binary.LittleEndian, &r)
-	if err != nil {
-		fmt.Printf("Warning: Unable to seed random number generator: %v\n", err)
-	} else {
-		rand.Seed(r)
-	}
+// A Config specifies extra options for SIRDS generation.
+type Config struct {
+	MaxDepth int
+	Flat     bool
+	PartSize int
+	Inverse  bool
 }
 
-func usageErr(err error) {
-	if err != nil {
-		fmt.Printf("Error: %v\n", err) //\033[0;41m\033[m
-		fmt.Printf("---------------------------\n\n")
-	}
-
-	flag.Usage()
+var DefaultConfig = &Config{
+	MaxDepth: 40,
+	Flat:     false,
+	PartSize: 100,
+	Inverse:  false,
 }
 
 func depthFromColor(c color.Color, max int, flat bool) int {
@@ -58,33 +39,26 @@ func depthFromColor(c color.Color, max int, flat bool) int {
 	return int(d)
 }
 
-func randomColor() color.Color {
-	c := color.RGBA{
-		R: (uint8)(rand.Uint32()),
-		G: (uint8)(rand.Uint32()),
-		B: (uint8)(rand.Uint32()),
-		A: 255,
+// Generate generates a new SIRDS from the depth map dm and draws it
+// to out, using the pattern pat. If config is nil, DefaultConfig is
+// used.
+func Generate(out draw.Image, dm image.Image, pat image.Image, config *Config) {
+	if config == nil {
+		config = DefaultConfig
 	}
 
-	return c
-}
-
-type Config struct {
-	MaxDepth int
-	Flat     bool
-	PartSize uint
-}
-
-func GenerateSIRDS(out *ImageFile, in *ImageFile, pat *ImageFile, config Config) {
-	patTile := TiledImage{pat.Image}
-
 	partSize := int(config.PartSize)
-	if partSize == 0 {
+	if partSize <= 0 {
 		partSize = pat.Bounds().Dx()
 	}
 
-	parts := in.Bounds().Dx() / partSize
-	if (in.Bounds().Dx() % partSize) != 0 {
+	patTile := TiledImage{
+		Image:     pat,
+		Rectangle: image.Rect(0, 0, out.Bounds().Dy(), partSize),
+	}
+
+	parts := dm.Bounds().Dx() / partSize
+	if (dm.Bounds().Dx() % partSize) != 0 {
 		parts++
 	}
 
@@ -96,7 +70,10 @@ func GenerateSIRDS(out *ImageFile, in *ImageFile, pat *ImageFile, config Config)
 				}
 
 				inX := outX - partSize
-				depth := depthFromColor(in.At(inX, y), config.MaxDepth, config.Flat)
+				depth := depthFromColor(dm.At(inX, y), config.MaxDepth, config.Flat)
+				if config.Inverse {
+					depth = config.MaxDepth - depth
+				}
 
 				if inX < 0 {
 					if outX-depth >= 0 {
@@ -112,89 +89,4 @@ func GenerateSIRDS(out *ImageFile, in *ImageFile, pat *ImageFile, config Config)
 			}
 		}
 	}
-}
-
-func main() {
-	var (
-		jpegOpt jpeg.Options
-		config  Config
-		patFile string
-	)
-	flag.UintVar(&config.PartSize, "partsize", 100, "Size of sections in the SIRDS")
-	flag.IntVar(&config.MaxDepth, "depth", 40, "Maximum depth")
-	flag.BoolVar(&config.Flat, "flat", false, "Generate a flat image")
-	flag.IntVar(&jpegOpt.Quality, "jpeg:quality", 95, "Quality of output JPEG image")
-	flag.StringVar(&patFile, "pat", "", "Custom pattern")
-	flag.Parse()
-	args := flag.Args()
-	if len(args) != 2 {
-		usageErr(nil)
-		os.Exit(1)
-	}
-	inFile := args[0]
-	outFile := args[1]
-
-	fmt.Printf("Options:\n")
-	fmt.Printf("  depth: %v\n", config.MaxDepth)
-	fmt.Printf("  flat: %v\n", config.Flat)
-	if config.PartSize == 0 {
-		fmt.Printf("  partsize: Detect\n")
-	} else {
-		fmt.Printf("  partsize: %v\n", config.PartSize)
-	}
-	fmt.Printf("  jpeg:quality: %v\n", jpegOpt.Quality)
-	if patFile == "" {
-		fmt.Printf("  pat: Random\n")
-	} else {
-		fmt.Printf("  pat: %v\n", patFile)
-	}
-	fmt.Printf("  src: %v\n", inFile)
-	fmt.Printf("  dest: %v\n", outFile)
-	fmt.Printf("\n")
-
-	in, err := LoadImageFile(inFile)
-	if err != nil {
-		usageErr(err)
-		os.Exit(1)
-	}
-
-	var pat *ImageFile
-	if patFile == "" {
-		fmt.Printf("Generating random pattern...\n")
-		if config.PartSize == 0 {
-			usageErr(errors.New("-partsize=0 but no -pat"))
-			os.Exit(1)
-		}
-		pat, err = NewRandPat("", int(config.PartSize), in.Bounds().Dy())
-		if err != nil {
-			usageErr(err)
-			os.Exit(1)
-		}
-	} else {
-		fmt.Printf("Loading pattern...\n")
-		pat, err = LoadImageFile(patFile)
-		if err != nil {
-			usageErr(err)
-			os.Exit(1)
-		}
-	}
-
-	out, err := NewImageFile(outFile, in.Bounds().Dx()+pat.Bounds().Dx(), in.Bounds().Dy())
-	if err != nil {
-		usageErr(err)
-		os.Exit(1)
-	}
-	out.SetJPEGOptions(&jpegOpt)
-
-	fmt.Printf("Generating SIRDS...\n")
-	GenerateSIRDS(out, in, pat, config)
-
-	fmt.Printf("Writing SIRDS...\n")
-	err = out.Save(os.Stdout, os.Stdin)
-	if err != nil {
-		fmt.Printf("Error: Couldn't save: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("Done.\n")
 }
