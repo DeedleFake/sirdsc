@@ -5,12 +5,21 @@ import (
 	"image/color"
 	"image/draw"
 	"math"
-	"math/rand"
-	"time"
 )
 
-func init() {
-	rand.Seed(int64(time.Since(time.Time{})))
+// A Config specifies extra options for SIRDS generation.
+type Config struct {
+	MaxDepth int
+	Flat     bool
+	PartSize int
+	Inverse  bool
+}
+
+var DefaultConfig = &Config{
+	MaxDepth: 40,
+	Flat:     false,
+	PartSize: 100,
+	Inverse:  false,
 }
 
 func depthFromColor(c color.Color, max int, flat bool) int {
@@ -30,19 +39,6 @@ func depthFromColor(c color.Color, max int, flat bool) int {
 	return int(d)
 }
 
-// A Config specifies extra options for SIRDS generation.
-type Config struct {
-	MaxDepth int
-	Flat     bool
-	PartSize int
-}
-
-var DefaultConfig = &Config{
-	MaxDepth: 40,
-	Flat:     false,
-	PartSize: 100,
-}
-
 // Generate generates a new SIRDS from the depth map dm and draws it
 // to out, using the pattern pat. If config is nil, DefaultConfig is
 // used.
@@ -52,13 +48,13 @@ func Generate(out draw.Image, dm image.Image, pat image.Image, config *Config) {
 	}
 
 	partSize := int(config.PartSize)
-	if partSize == 0 {
+	if partSize <= 0 {
 		partSize = pat.Bounds().Dx()
 	}
 
 	patTile := TiledImage{
 		Image:     pat,
-		Rectangle: image.Rect(0, 0, out.Bounds().Dy(), config.PartSize),
+		Rectangle: image.Rect(0, 0, out.Bounds().Dy(), partSize),
 	}
 
 	parts := dm.Bounds().Dx() / partSize
@@ -75,6 +71,9 @@ func Generate(out draw.Image, dm image.Image, pat image.Image, config *Config) {
 
 				inX := outX - partSize
 				depth := depthFromColor(dm.At(inX, y), config.MaxDepth, config.Flat)
+				if config.Inverse {
+					depth = config.MaxDepth - depth
+				}
 
 				if inX < 0 {
 					if outX-depth >= 0 {

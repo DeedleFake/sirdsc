@@ -48,6 +48,7 @@ func main() {
 	flag.IntVar(&config.PartSize, "partsize", sirdsc.DefaultConfig.PartSize, "Size of sections in the SIRDS")
 	flag.IntVar(&config.MaxDepth, "depth", sirdsc.DefaultConfig.MaxDepth, "Maximum depth")
 	flag.BoolVar(&config.Flat, "flat", sirdsc.DefaultConfig.Flat, "Generate a flat image")
+	flag.BoolVar(&config.Inverse, "inverse", sirdsc.DefaultConfig.Inverse, "Inverse depth math")
 	flag.Int64Var(&seed, "seed", int64(time.Since(time.Time{})), "Color generation seed")
 	flag.StringVar(&patFile, "pat", "", "Custom pattern")
 	flag.StringVar(&outFile, "o", "sirds.png", "Output file")
