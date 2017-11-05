@@ -20,11 +20,6 @@ func Generate(out draw.Image, dm DepthMap, pat image.Image, partSize int) {
 		Image: pat,
 	}
 
-	parts := dm.Bounds().Dx() / partSize
-	if (dm.Bounds().Dx() % partSize) != 0 {
-		parts++
-	}
-
 	var wg sync.WaitGroup
 	wg.Add(out.Bounds().Dy())
 	for y := 0; y < out.Bounds().Dy(); y++ {
