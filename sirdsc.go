@@ -2,53 +2,16 @@ package sirdsc
 
 import (
 	"image"
-	"image/color"
 	"image/draw"
-	"math"
 	"sync"
 )
 
-// A Config specifies extra options for SIRDS generation.
-type Config struct {
-	MaxDepth int
-	Flat     bool
-	PartSize int
-	Inverse  bool
-}
-
-var DefaultConfig = &Config{
-	MaxDepth: 40,
-	Flat:     false,
-	PartSize: 100,
-	Inverse:  false,
-}
-
-func depthFromColor(c color.Color, max int, flat bool) int {
-	c = color.RGBAModel.Convert(c)
-	tr, tg, tb, _ := c.RGBA()
-	r := uint8(tr)
-	g := uint8(tg)
-	b := uint8(tb)
-
-	v := math.Max(float64(g), math.Max(float64(b), float64(r)))
-	d := v * float64(max) / math.MaxUint8
-
-	if (flat) && (d != 0) {
-		return max
-	}
-
-	return int(d)
-}
-
 // Generate generates a new SIRDS from the depth map dm and draws it
-// to out, using the pattern pat. If config is nil, DefaultConfig is
-// used.
-func Generate(out draw.Image, dm image.Image, pat image.Image, config *Config) {
-	if config == nil {
-		config = DefaultConfig
-	}
-
-	partSize := int(config.PartSize)
+// to out, using the pattern pat. partSize specifies the width of a
+// single section of the generated stereogram. If partSize is less
+// than or equal to zero, the width of pat is used. 100 is recommended
+// as a good default.
+func Generate(out draw.Image, dm DepthMap, pat image.Image, partSize int) {
 	if partSize <= 0 {
 		partSize = pat.Bounds().Dx()
 	}
@@ -69,10 +32,7 @@ func Generate(out draw.Image, dm image.Image, pat image.Image, config *Config) {
 			defer wg.Done()
 
 			for x := 0; x < out.Bounds().Dx(); x++ {
-				depth := depthFromColor(dm.At(x-partSize, y), config.MaxDepth, config.Flat)
-				if config.Inverse {
-					depth = config.MaxDepth - depth
-				}
+				depth := dm.At(x-partSize, y)
 
 				src := pat
 				if x-partSize >= 0 {

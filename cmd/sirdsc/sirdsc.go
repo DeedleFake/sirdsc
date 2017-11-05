@@ -40,24 +40,18 @@ func saveImage(file string, img image.Image) error {
 }
 
 func main() {
-	var (
-		config  sirdsc.Config
-		seed    int64
-		patFile string
-		outFile string
-	)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %v [options] <src>\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		flag.PrintDefaults()
 	}
-	flag.IntVar(&config.PartSize, "partsize", sirdsc.DefaultConfig.PartSize, "Size of sections in the SIRDS")
-	flag.IntVar(&config.MaxDepth, "depth", sirdsc.DefaultConfig.MaxDepth, "Maximum depth")
-	flag.BoolVar(&config.Flat, "flat", sirdsc.DefaultConfig.Flat, "Generate a flat image")
-	flag.BoolVar(&config.Inverse, "inverse", sirdsc.DefaultConfig.Inverse, "Inverse depth math")
-	flag.Int64Var(&seed, "seed", int64(time.Since(time.Time{})), "Color generation seed")
-	flag.StringVar(&patFile, "pat", "", "Custom pattern")
-	flag.StringVar(&outFile, "o", "sirds.png", "Output file")
+	partSize := flag.Int("partsize", 100, "Size of sections in the SIRDS")
+	maxDepth := flag.Int("depth", sirdsc.DefaultMaxImageDepth, "Maximum depth")
+	flat := flag.Bool("flat", false, "Generate an image with only two planes")
+	inverse := flag.Bool("inverse", false, "Treat darker pixels as closer in the depth map")
+	seed := flag.Int64("seed", int64(time.Since(time.Time{})), "Color generation seed")
+	patFile := flag.String("pat", "", "If not empty, use the specified file as the pattern instead of randomizing")
+	outFile := flag.String("o", "sirds.png", "Output file")
 	flag.Parse()
 
 	if flag.NArg() != 1 {
@@ -66,17 +60,24 @@ func main() {
 	}
 	inFile := flag.Arg(0)
 
-	in, err := loadImage(inFile)
+	inImg, err := loadImage(inFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open %q: %v\n", inFile, err)
 		os.Exit(1)
 	}
+	in := sirdsc.ImageDepthMap{
+		Image: inImg,
 
-	pat := image.Image(sirdsc.RandImage(seed))
-	if patFile != "" {
-		pat, err = loadImage(patFile)
+		Max:     *maxDepth,
+		Flat:    *flat,
+		Inverse: *inverse,
+	}
+
+	pat := image.Image(sirdsc.RandImage(*seed))
+	if *patFile != "" {
+		pat, err = loadImage(*patFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to open %q: %v\n", patFile, err)
+			fmt.Fprintf(os.Stderr, "Failed to open %q: %v\n", *patFile, err)
 			os.Exit(1)
 		}
 	}
@@ -85,14 +86,14 @@ func main() {
 	out := image.NewNRGBA(image.Rect(
 		inb.Min.X,
 		inb.Min.Y,
-		inb.Max.X+config.PartSize,
+		inb.Max.X+*partSize,
 		inb.Max.Y,
 	))
-	sirdsc.Generate(out, in, pat, &config)
+	sirdsc.Generate(out, in, pat, *partSize)
 
-	err = saveImage(outFile, out)
+	err = saveImage(*outFile, out)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to write to %q: %v", outFile, err)
+		fmt.Fprintf(os.Stderr, "Failed to write to %q: %v", *outFile, err)
 		os.Exit(1)
 	}
 }
