@@ -27,11 +27,11 @@ func (img TiledImage) c(x, y int) (int, int) {
 	return x, y
 }
 
-func (img TiledImage) Bounds() image.Rectangle {
+func (img TiledImage) Bounds() image.Rectangle { // nolint
 	return image.Rect(-1e9, -1e9, 1e9, 1e9)
 }
 
-func (img TiledImage) At(x, y int) color.Color {
+func (img TiledImage) At(x, y int) color.Color { // nolint
 	x, y = img.c(x, y)
 	return img.Image.At(x, y)
 }

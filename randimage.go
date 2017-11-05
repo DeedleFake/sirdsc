@@ -19,17 +19,19 @@ var (
 // each (x, y) coordinate, using itself as a seed. In other words,
 // given two RandImages that are equal to each other, the color at
 // the same (x, y) in each are also equal.
+//
+// A RandImage has infinite size.
 type RandImage int64
 
-func (img RandImage) ColorModel() color.Model {
+func (img RandImage) ColorModel() color.Model { // nolint
 	return color.RGBAModel
 }
 
-func (img RandImage) Bounds() image.Rectangle {
+func (img RandImage) Bounds() image.Rectangle { // nolint
 	return image.Rect(-1e9, -1e9, 1e9, 1e9)
 }
 
-func (img RandImage) At(x, y int) color.Color {
+func (img RandImage) At(x, y int) color.Color { // nolint
 	r := randpool.Get().(*rand.Rand)
 	defer randpool.Put(r)
 
