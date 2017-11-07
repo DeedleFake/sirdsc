@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/DeedleFake/sirdsc"
-	"github.com/DeedleFake/sirdsc/examples/game/sdl"
+	"github.com/DeedleFake/sirdsc/examples/game/internal/sdl"
 )
 
 type DepthMap struct {
