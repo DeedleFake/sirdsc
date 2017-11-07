@@ -27,6 +27,7 @@ const (
 
 	PIXELFORMAT_ARGB8888 = C.SDL_PIXELFORMAT_ARGB8888
 	PIXELFORMAT_RGBA32   = C.SDL_PIXELFORMAT_RGBA32
+	PIXELFORMAT_ABGR8888 = C.SDL_PIXELFORMAT_ABGR8888
 
 	TEXTUREACCESS_STREAMING = C.SDL_TEXTUREACCESS_STREAMING
 )
@@ -149,10 +150,9 @@ func (ren *Renderer) CreateTexture(format uint32, access, w, h int) (*Texture, e
 	}
 
 	return &Texture{
-		c:      t,
-		format: C.SDL_AllocFormat(C.Uint32(format)),
-		w:      w,
-		h:      h,
+		c: t,
+		w: w,
+		h: h,
 	}, nil
 }
 
@@ -163,9 +163,8 @@ func (t *Texture) Destroy() {
 type TextureImage struct {
 	t *Texture
 
-	format *C.SDL_PixelFormat
-	w, h   int
-	pix    []C.Uint32
+	w, h int
+	pix  []C.Uint32
 }
 
 func (t *Texture) Image() *TextureImage {
@@ -174,10 +173,9 @@ func (t *Texture) Image() *TextureImage {
 	C.SDL_LockTexture(t.c, nil, &pixels, &pitch)
 
 	return &TextureImage{
-		t:      t,
-		format: t.format,
-		w:      t.w,
-		h:      t.h,
+		t: t,
+		w: t.w,
+		h: t.h,
 		pix: *(*[]C.Uint32)(unsafe.Pointer(&reflect.SliceHeader{
 			Data: uintptr(pixels),
 			Len:  t.w * t.h,
@@ -195,8 +193,11 @@ func (img *TextureImage) Bounds() image.Rectangle {
 }
 
 func (img *TextureImage) At(x, y int) color.Color {
-	var r, g, b, a C.Uint8
-	C.SDL_GetRGBA(img.pix[(y*img.w)+x], img.format, &r, &g, &b, &a)
+	c := img.pix[(y*img.w)+x]
+	a := (c & 0xFF000000) >> 24
+	b := (c & 0xFF0000) >> 16
+	g := (c & 0xFF00) >> 8
+	r := c & 0xFF
 
 	return color.RGBA{
 		R: uint8(r),
@@ -208,9 +209,9 @@ func (img *TextureImage) At(x, y int) color.Color {
 
 func (img *TextureImage) Set(x, y int, c color.Color) {
 	r, g, b, a := c.RGBA()
-	cc := C.SDL_MapRGBA(img.format, C.Uint8(r), C.Uint8(g), C.Uint8(b), C.Uint8(a))
+	cc := uint32((a*255/0xFFFF)<<24) | uint32((b*255/0xFFFF)<<16) | uint32((g*255/0xFFFF)<<8) | uint32(r*255/0xFFFF)
 
-	img.pix[(y*img.w)+x] = cc
+	img.pix[(y*img.w)+x] = C.Uint32(cc)
 }
 
 func (img *TextureImage) Close() {

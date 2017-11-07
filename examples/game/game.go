@@ -41,7 +41,7 @@ func main() {
 	defer win.Destroy()
 
 	out, err := ren.CreateTexture(
-		sdl.PIXELFORMAT_RGBA32,
+		sdl.PIXELFORMAT_ABGR8888,
 		sdl.TEXTUREACCESS_STREAMING,
 		740, 480,
 	)
