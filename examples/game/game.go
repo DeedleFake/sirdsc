@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"log"
 	"math/rand"
@@ -61,7 +62,23 @@ func main() {
 
 	tick := time.NewTicker(time.Second / 60)
 	defer tick.Stop()
-	for range tick.C {
+
+	var frames uint
+	last := struct {
+		ts    time.Time
+		frame uint
+	}{
+		ts: time.Now(),
+	}
+
+	for start := range tick.C {
+		if sec := start.Sub(last.ts).Seconds(); sec > 5 {
+			fmt.Printf("FPS: %v\n", 1/(sec/float64(frames-last.frame)))
+
+			last.ts = start
+			last.frame = frames
+		}
+
 		for {
 			ev := sdl.PollEvent()
 			if ev == nil {
@@ -102,5 +119,7 @@ func main() {
 
 		ren.Copy(out, image.ZR, image.ZR)
 		ren.Present()
+
+		frames++
 	}
 }
