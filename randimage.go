@@ -28,10 +28,9 @@ func (img RandImage) At(x, y int) color.Color { // nolint
 	base ^= rand[int(img%RandImage(len(rand)))]
 
 	g := uint8(base ^ rand[int(base%uint64(len(rand)))])
-	base ^= rand[int(img%RandImage(len(rand)))]
+	base ^= rand[int(base%uint64(len(rand)))]
 
 	b := uint8(base ^ rand[int(base%uint64(len(rand)))])
-	base ^= rand[int(img%RandImage(len(rand)))]
 
 	return color.RGBA{
 		R: r,

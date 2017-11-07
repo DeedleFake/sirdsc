@@ -14,11 +14,13 @@ type TiledImage struct {
 func (img TiledImage) c(x, y int) (int, int) {
 	b := img.Image.Bounds()
 
+	// TODO: This doesn't make sense if b.Min.X is less than zero.
 	x = (x-b.Min.X)%b.Dx() + b.Min.X
 	if x < 0 {
 		x += b.Dx()
 	}
 
+	// TODO: This doesn't make sense if b.Min.Y is less than zero.
 	y = (y-b.Min.Y)%b.Dy() + b.Min.Y
 	if y < 0 {
 		y += b.Dy()
