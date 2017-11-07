@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"log"
+	"math"
 	"math/rand"
 	"time"
 
@@ -11,18 +12,38 @@ import (
 	"github.com/DeedleFake/sirdsc/examples/game/internal/sdl"
 )
 
+const (
+	ScreenWidth  = 640
+	ScreenHeight = 480
+	PartSize     = 100
+
+	FPSDelay = 5
+)
+
 type DepthMap struct {
-	Rect image.Rectangle
+	Depth int
+	Rect  image.Rectangle
+
+	Obstacle image.Rectangle
 }
 
 func (dm DepthMap) Bounds() image.Rectangle {
-	return image.Rect(0, 0, 640, 480)
+	return image.Rect(0, 0, ScreenWidth, ScreenHeight)
 }
 
 func (dm DepthMap) At(x, y int) int {
-	if image.Pt(x, y).In(dm.Rect) {
+	p := image.Pt(x, y)
+
+	if p.In(dm.Rect) && p.In(dm.Obstacle) {
+		return int(math.Max(float64(dm.Depth), 10))
+	}
+	if p.In(dm.Rect) {
+		return dm.Depth
+	}
+	if p.In(dm.Obstacle) {
 		return 10
 	}
+
 	return 0
 }
 
@@ -33,7 +54,7 @@ func main() {
 	}
 	defer sdl.Quit()
 
-	win, ren, err := sdl.CreateWindowAndRenderer(740, 480, 0)
+	win, ren, err := sdl.CreateWindowAndRenderer(ScreenWidth+PartSize, ScreenHeight, 0)
 	if err != nil {
 		log.Fatalf("Failed to create window: %v", err)
 	}
@@ -43,7 +64,7 @@ func main() {
 	out, err := ren.CreateTexture(
 		sdl.PIXELFORMAT_ABGR8888,
 		sdl.TEXTUREACCESS_STREAMING,
-		740, 480,
+		ScreenWidth+PartSize, ScreenHeight,
 	)
 	if err != nil {
 		log.Fatalf("Failed to create texture: %v", err)
@@ -57,7 +78,15 @@ func main() {
 	}
 
 	dm := DepthMap{
-		Rect: image.Rect(100, 100, 200, 200),
+		Depth: 10,
+		Rect:  image.Rect(100, 100, 200, 200),
+
+		Obstacle: image.Rect(
+			ScreenWidth/2-35,
+			ScreenHeight/2-35,
+			ScreenWidth/2+35,
+			ScreenHeight/2+35,
+		),
 	}
 
 	tick := time.NewTicker(time.Second / 60)
@@ -72,7 +101,7 @@ func main() {
 	}
 
 	for start := range tick.C {
-		if sec := start.Sub(last.ts).Seconds(); sec > 5 {
+		if sec := start.Sub(last.ts).Seconds(); sec > FPSDelay {
 			fmt.Printf("FPS: %v\n", 1/(sec/float64(frames-last.frame)))
 
 			last.ts = start
@@ -113,8 +142,21 @@ func main() {
 			dm.Rect.Max.X += 10
 		}
 
+		if keyDown(sdl.K_w) {
+			dm.Depth--
+		}
+		if keyDown(sdl.K_s) {
+			dm.Depth++
+		}
+		if dm.Depth < 5 {
+			dm.Depth = 5
+		}
+		if dm.Depth > 20 {
+			dm.Depth = 20
+		}
+
 		img := out.Image()
-		sirdsc.Generate(img, dm, sirdsc.RandImage(rand.Uint64()), 100)
+		sirdsc.Generate(img, dm, sirdsc.RandImage(rand.Uint64()), PartSize)
 		img.Close()
 
 		ren.Copy(out, image.ZR, image.ZR)
