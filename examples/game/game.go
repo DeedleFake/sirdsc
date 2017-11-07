@@ -3,6 +3,7 @@ package main
 import (
 	"image"
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/DeedleFake/sirdsc"
@@ -39,7 +40,7 @@ func main() {
 	defer win.Destroy()
 
 	out, err := ren.CreateTexture(
-		sdl.PIXELFORMAT_ARGB8888,
+		sdl.PIXELFORMAT_RGBA32,
 		sdl.TEXTUREACCESS_STREAMING,
 		740, 480,
 	)
@@ -96,7 +97,7 @@ func main() {
 		}
 
 		img := out.Image()
-		sirdsc.Generate(img, dm, sirdsc.RandImage(1), 100)
+		sirdsc.Generate(img, dm, sirdsc.RandImage(rand.Uint64()), 100)
 		img.Close()
 
 		ren.Copy(out, image.ZR, image.ZR)
