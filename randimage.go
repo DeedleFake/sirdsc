@@ -11,7 +11,7 @@ import (
 // the same (x, y) in each are also equal.
 //
 // A RandImage has infinite size.
-type RandImage int64
+type RandImage uint64
 
 func (img RandImage) ColorModel() color.Model { // nolint
 	return color.RGBAModel
@@ -25,13 +25,13 @@ func (img RandImage) At(x, y int) color.Color { // nolint
 	base := uint64(int(img)^x) ^ rand[int(uint64(y)%uint64(len(rand)))]
 
 	r := uint8(base ^ rand[int(base%uint64(len(rand)))])
-	base ^= rand[int(img)%len(rand)]
+	base ^= rand[int(img%RandImage(len(rand)))]
 
 	g := uint8(base ^ rand[int(base%uint64(len(rand)))])
-	base ^= rand[int(img)%len(rand)]
+	base ^= rand[int(img%RandImage(len(rand)))]
 
 	b := uint8(base ^ rand[int(base%uint64(len(rand)))])
-	base ^= rand[int(img)%len(rand)]
+	base ^= rand[int(img%RandImage(len(rand)))]
 
 	return color.RGBA{
 		R: r,
