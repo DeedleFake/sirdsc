@@ -2,32 +2,11 @@ package main
 
 import (
 	"image"
-	"image/color"
 	"log"
 
 	"github.com/DeedleFake/sirdsc"
 	"github.com/DeedleFake/sirdsc/examples/game/sdl"
 )
-
-type SurfaceImage struct {
-	Surface *sdl.Surface
-}
-
-func (img SurfaceImage) ColorModel() color.Model {
-	return color.RGBAModel
-}
-
-func (img SurfaceImage) Bounds() image.Rectangle {
-	return image.Rect(0, 0, img.Surface.Width(), img.Surface.Height())
-}
-
-func (img SurfaceImage) At(x, y int) color.Color {
-	panic("Not implemented.")
-}
-
-func (img SurfaceImage) Set(x, y int, c color.Color) {
-	panic("Not implemented.")
-}
 
 type DepthMap struct {
 	Rect image.Rectangle
@@ -67,9 +46,6 @@ func main() {
 	screen, err := win.GetSurface()
 	if err != nil {
 		log.Fatalf("Failed to create surface: %v", err)
-	}
-	out := &SurfaceImage{
-		Surface: screen,
 	}
 
 	keys := make(map[uint32]bool)
@@ -117,7 +93,7 @@ func main() {
 			dm.Rect.Max.X++
 		}
 
-		sirdsc.Generate(out, dm, sirdsc.RandImage(1), 100)
+		sirdsc.Generate(screen, dm, sirdsc.RandImage(1), 100)
 		win.UpdateSurface()
 	}
 }

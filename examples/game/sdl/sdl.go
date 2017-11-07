@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/color"
+	"reflect"
 	"runtime"
 	"unsafe"
 )
@@ -81,12 +83,46 @@ func (win *Window) GetSurface() (*Surface, error) {
 	}, nil
 }
 
-func (s *Surface) Width() int {
-	return int(s.c.w)
+func (s *Surface) ColorModel() color.Model {
+	return color.RGBAModel
 }
 
-func (s *Surface) Height() int {
-	return int(s.c.h)
+func (s *Surface) Bounds() image.Rectangle {
+	return image.Rect(0, 0, int(s.c.w), int(s.c.h))
+}
+
+func (s *Surface) At(x, y int) color.Color {
+	C.SDL_LockSurface(s.c)
+	defer C.SDL_UnlockSurface(s.c)
+
+	c := s.pix()[(y*int(s.c.w))+x]
+
+	var r, g, b C.Uint8
+	C.SDL_GetRGB(C.Uint32(c), s.c.format, &r, &g, &b)
+	return color.RGBA{
+		R: uint8(r),
+		G: uint8(g),
+		B: uint8(b),
+		A: 255,
+	}
+}
+
+func (s *Surface) Set(x, y int, c color.Color) {
+	r, g, b, _ := c.RGBA()
+	cc := C.SDL_MapRGB(s.c.format, C.Uint8(r), C.Uint8(g), C.Uint8(b))
+
+	C.SDL_LockSurface(s.c)
+	defer C.SDL_UnlockSurface(s.c)
+
+	s.pix()[(y*int(s.c.w))+x] = uint32(cc)
+}
+
+func (s *Surface) pix() []uint32 {
+	return *(*[]uint32)(unsafe.Pointer(&reflect.SliceHeader{
+		Data: uintptr(unsafe.Pointer(s.c.pixels)),
+		Len:  int(s.c.w * s.c.h),
+		Cap:  int(s.c.w * s.c.h),
+	}))
 }
 
 func sdlRect(r image.Rectangle) (cr *C.SDL_Rect) {
