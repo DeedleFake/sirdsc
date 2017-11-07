@@ -40,7 +40,7 @@ func Generate(out draw.Image, dm DepthMap, pat image.Image, partSize int) {
 				c := src.At(x-partSize, y)
 				out.Set(x, y, c)
 
-				if depth != 0 {
+				if (depth != 0) && (x-depth >= b.Min.X) && (x-depth <= b.Max.X) {
 					out.Set(x-depth, y, c)
 				}
 			}
