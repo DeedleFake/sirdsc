@@ -7,6 +7,7 @@ import (
 	"image/color"
 	"reflect"
 	"runtime"
+	"sync"
 	"unsafe"
 )
 
@@ -23,6 +24,10 @@ const (
 	K_DOWN  = C.SDLK_DOWN
 	K_LEFT  = C.SDLK_LEFT
 	K_RIGHT = C.SDLK_RIGHT
+
+	PIXELFORMAT_ARGB8888 = C.SDL_PIXELFORMAT_ARGB8888
+
+	TEXTUREACCESS_STREAMING = C.SDL_TEXTUREACCESS_STREAMING
 )
 
 func Init() error {
@@ -60,12 +65,155 @@ func CreateWindow(title string, x, y, w, h int, flags uint32) (*Window, error) {
 	return win, nil
 }
 
+func CreateWindowAndRenderer(w, h int, flags uint32) (*Window, *Renderer, error) {
+	var win *C.SDL_Window
+	var ren *C.SDL_Renderer
+	if C.SDL_CreateWindowAndRenderer(C.int(w), C.int(h), C.Uint32(flags), &win, &ren) < 0 {
+		return nil, nil, errors.New(C.GoString(C.SDL_GetError()))
+	}
+
+	return &Window{c: win}, &Renderer{
+		c: ren,
+
+		pix: make([]color.Color, w*h),
+		w:   w,
+		h:   h,
+	}, nil
+}
+
 func (win *Window) Destroy() {
 	C.SDL_DestroyWindow(win.c)
 }
 
 func (win *Window) UpdateSurface() {
 	C.SDL_UpdateWindowSurface(win.c)
+}
+
+type Renderer struct {
+	c *C.SDL_Renderer
+
+	m    sync.RWMutex
+	pix  []color.Color
+	w, h int
+}
+
+func (ren *Renderer) Destroy() {
+	C.SDL_DestroyRenderer(ren.c)
+}
+
+func (ren *Renderer) Copy(tex *Texture, src image.Rectangle, dst image.Rectangle) {
+	C.SDL_RenderCopy(ren.c, tex.c, sdlRect(src), sdlRect(dst))
+}
+
+func (ren *Renderer) ColorModel() color.Model {
+	return color.RGBAModel
+}
+
+func (ren *Renderer) Bounds() image.Rectangle {
+	return image.Rect(0, 0, ren.w, ren.h)
+}
+
+func (ren *Renderer) At(x, y int) color.Color {
+	ren.m.RLock()
+	defer ren.m.RUnlock()
+
+	return ren.pix[(y*ren.w)+x]
+}
+
+func (ren *Renderer) Set(x, y int, c color.Color) {
+	ren.m.Lock()
+	defer ren.m.Unlock()
+
+	r, g, b, a := c.RGBA()
+	C.SDL_SetRenderDrawColor(ren.c, C.Uint8(r), C.Uint8(g), C.Uint8(b), C.Uint8(a))
+	C.SDL_RenderDrawPoint(ren.c, C.int(x), C.int(y))
+	ren.pix[(y*ren.w)+x] = c
+}
+
+func (ren *Renderer) Present() {
+	C.SDL_RenderPresent(ren.c)
+}
+
+type Texture struct {
+	c *C.SDL_Texture
+
+	format *C.SDL_PixelFormat
+	w, h   int
+}
+
+func (ren *Renderer) CreateTexture(format uint32, access, w, h int) (*Texture, error) {
+	t := C.SDL_CreateTexture(ren.c, C.Uint32(format), C.int(access), C.int(w), C.int(h))
+	if t == nil {
+		return nil, errors.New(C.GoString(C.SDL_GetError()))
+	}
+
+	return &Texture{
+		c:      t,
+		format: C.SDL_AllocFormat(C.Uint32(format)),
+		w:      w,
+		h:      h,
+	}, nil
+}
+
+func (t *Texture) Destroy() {
+	C.SDL_DestroyTexture(t.c)
+}
+
+type TextureImage struct {
+	t *Texture
+
+	format *C.SDL_PixelFormat
+	w, h   int
+	pix    []uint32
+}
+
+func (t *Texture) Image() *TextureImage {
+	var pixels unsafe.Pointer
+	var pitch C.int
+	C.SDL_LockTexture(t.c, nil, &pixels, &pitch)
+
+	return &TextureImage{
+		t:      t,
+		format: t.format,
+		w:      t.w,
+		h:      t.h,
+		pix: *(*[]uint32)(unsafe.Pointer(&reflect.SliceHeader{
+			Data: uintptr(pixels),
+			Len:  t.w * t.h,
+			Cap:  t.w * t.h,
+		})),
+	}
+}
+
+func (img *TextureImage) ColorModel() color.Model {
+	return color.RGBAModel
+}
+
+func (img *TextureImage) Bounds() image.Rectangle {
+	return image.Rect(0, 0, img.w, img.h)
+}
+
+func (img *TextureImage) At(x, y int) color.Color {
+	var r, g, b, a C.Uint8
+	C.SDL_GetRGBA(C.Uint32(img.pix[(y*img.h)+x]), img.format, &r, &g, &b, &a)
+
+	return color.RGBA{
+		R: uint8(r),
+		G: uint8(g),
+		B: uint8(b),
+		A: uint8(a),
+	}
+}
+
+func (img *TextureImage) Set(x, y int, c color.Color) {
+	r, g, b, a := c.RGBA()
+	cc := C.SDL_MapRGBA(img.format, C.Uint8(r), C.Uint8(g), C.Uint8(b), C.Uint8(a))
+
+	img.pix[(y*img.w)+x] = uint32(cc)
+}
+
+func (img *TextureImage) Close() {
+	C.SDL_UnlockTexture(img.t.c)
 }
 
 type Surface struct {

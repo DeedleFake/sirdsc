@@ -3,7 +3,6 @@ package main
 import (
 	"image"
 	"log"
-	"math/rand"
 	"time"
 
 	"github.com/DeedleFake/sirdsc"
@@ -32,23 +31,22 @@ func main() {
 	}
 	defer sdl.Quit()
 
-	win, err := sdl.CreateWindow(
-		"SIRDS",
-		sdl.WINDOWPOS_UNDEFINED,
-		sdl.WINDOWPOS_UNDEFINED,
-		740,
-		480,
-		0,
-	)
+	win, ren, err := sdl.CreateWindowAndRenderer(740, 480, 0)
 	if err != nil {
 		log.Fatalf("Failed to create window: %v", err)
 	}
+	defer ren.Destroy()
 	defer win.Destroy()
 
-	screen, err := win.GetSurface()
+	out, err := ren.CreateTexture(
+		sdl.PIXELFORMAT_ARGB8888,
+		sdl.TEXTUREACCESS_STREAMING,
+		740, 480,
+	)
 	if err != nil {
-		log.Fatalf("Failed to create surface: %v", err)
+		log.Fatalf("Failed to create texture: %v", err)
 	}
+	defer out.Destroy()
 
 	keys := make(map[uint32]bool)
 	keyDown := func(c uint32) bool {
@@ -97,7 +95,11 @@ func main() {
 			dm.Rect.Max.X += 10
 		}
 
-		sirdsc.Generate(screen, dm, sirdsc.RandImage(rand.Uint32()), 100)
-		win.UpdateSurface()
+		img := out.Image()
+		sirdsc.Generate(img, dm, sirdsc.RandImage(1), 100)
+		img.Close()
+
+		ren.Copy(out, image.ZR, image.ZR)
+		ren.Present()
 	}
 }
