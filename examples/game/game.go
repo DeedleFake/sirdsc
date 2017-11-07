@@ -3,6 +3,8 @@ package main
 import (
 	"image"
 	"log"
+	"math/rand"
+	"time"
 
 	"github.com/DeedleFake/sirdsc"
 	"github.com/DeedleFake/sirdsc/examples/game/sdl"
@@ -58,7 +60,9 @@ func main() {
 		Rect: image.Rect(100, 100, 200, 200),
 	}
 
-	for {
+	tick := time.NewTicker(time.Second / 60)
+	defer tick.Stop()
+	for range tick.C {
 		for {
 			ev := sdl.PollEvent()
 			if ev == nil {
@@ -77,23 +81,23 @@ func main() {
 		}
 
 		if keyDown(sdl.K_UP) {
-			dm.Rect.Min.Y--
-			dm.Rect.Max.Y--
+			dm.Rect.Min.Y -= 10
+			dm.Rect.Max.Y -= 10
 		}
 		if keyDown(sdl.K_DOWN) {
-			dm.Rect.Min.Y++
-			dm.Rect.Max.Y++
+			dm.Rect.Min.Y += 10
+			dm.Rect.Max.Y += 10
 		}
 		if keyDown(sdl.K_LEFT) {
-			dm.Rect.Min.X--
-			dm.Rect.Max.X--
+			dm.Rect.Min.X -= 10
+			dm.Rect.Max.X -= 10
 		}
 		if keyDown(sdl.K_RIGHT) {
-			dm.Rect.Min.X++
-			dm.Rect.Max.X++
+			dm.Rect.Min.X += 10
+			dm.Rect.Max.X += 10
 		}
 
-		sirdsc.Generate(screen, dm, sirdsc.RandImage(1), 100)
+		sirdsc.Generate(screen, dm, sirdsc.RandImage(rand.Uint32()), 100)
 		win.UpdateSurface()
 	}
 }
