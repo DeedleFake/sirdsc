@@ -40,6 +40,37 @@ func (img RandImage) At(x, y int) color.Color { // nolint
 	}
 }
 
+// A SymmetricRandImage is a variant of RandImage that is symmetric,
+// such that a pixel at (a, b) is equal to a pixel at (b, a).
+type SymmetricRandImage uint64
+
+func (img SymmetricRandImage) ColorModel() color.Model { // nolint
+	return color.RGBAModel
+}
+
+func (img SymmetricRandImage) Bounds() image.Rectangle { // nolint
+	return image.Rect(-1e9, -1e9, 1e9, 1e9)
+}
+
+func (img SymmetricRandImage) At(x, y int) color.Color { // nolint
+	base := uint64(int(img) ^ x ^ y)
+
+	r := uint8(base ^ rand[int(base%uint64(len(rand)))])
+	base ^= rand[int(img%SymmetricRandImage(len(rand)))]
+
+	g := uint8(base ^ rand[int(base%uint64(len(rand)))])
+	base ^= rand[int(base%uint64(len(rand)))]
+
+	b := uint8(base ^ rand[int(base%uint64(len(rand)))])
+
+	return color.RGBA{
+		R: r,
+		G: g,
+		B: b,
+		A: 255,
+	}
+}
+
 var rand = []uint64{
 	5577006791947779410, 8674665223082153551, 15352856648520921629, 13260572831089785859, 3916589616287113937,
 	6334824724549167320, 9828766684487745566, 10667007354186551956, 894385949183117216, 11998794077335055257,
