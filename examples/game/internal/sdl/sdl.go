@@ -141,8 +141,7 @@ func (ren *Renderer) Present() {
 type Texture struct {
 	c *C.SDL_Texture
 
-	format *C.SDL_PixelFormat
-	w, h   int
+	w, h int
 }
 
 func (ren *Renderer) CreateTexture(format uint32, access, w, h int) (*Texture, error) {
@@ -211,7 +210,7 @@ func (img *TextureImage) At(x, y int) color.Color {
 
 func (img *TextureImage) Set(x, y int, c color.Color) {
 	r, g, b, a := c.RGBA()
-	cc := uint32((a*255/0xFFFF)<<24) | uint32((b*255/0xFFFF)<<16) | uint32((g*255/0xFFFF)<<8) | uint32(r*255/0xFFFF)
+	cc := ((a * 255 / 0xFFFF) << 24) | ((b * 255 / 0xFFFF) << 16) | ((g * 255 / 0xFFFF) << 8) | (r * 255 / 0xFFFF)
 
 	img.pix[(y*img.w)+x] = C.Uint32(cc)
 }
@@ -271,7 +270,7 @@ func (s *Surface) Set(x, y int, c color.Color) {
 
 func (s *Surface) pix() []uint32 {
 	return *(*[]uint32)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(s.c.pixels)),
+		Data: uintptr(s.c.pixels),
 		Len:  int(s.c.w * s.c.h),
 		Cap:  int(s.c.w * s.c.h),
 	}))

@@ -13,13 +13,23 @@ import (
 )
 
 const (
-	ScreenWidth  = 640
-	ScreenHeight = 480
-	PartSize     = 100
+	// ScreenWidth is the width of the underlying depth map. The actual
+	// display will be wider by PartSize pixels.
+	ScreenWidth = 640
 
+	// ScreenHeight is the height of both the depth map and the display.
+	ScreenHeight = 480
+
+	// PartSize is the size of a part of the stererogram.
+	PartSize = 100
+
+	// FPSDelay is the number of seconds to in between each printing of
+	// the FPS.
 	FPSDelay = 5
 )
 
+// DepthMap is an implementation of sirdsc.DepthMap that 'draws'
+// objects as depths, rather than colors.
 type DepthMap struct {
 	Depth int
 	Rect  image.Rectangle
@@ -27,11 +37,11 @@ type DepthMap struct {
 	Obstacle image.Rectangle
 }
 
-func (dm DepthMap) Bounds() image.Rectangle {
+func (dm DepthMap) Bounds() image.Rectangle { // nolint
 	return image.Rect(0, 0, ScreenWidth, ScreenHeight)
 }
 
-func (dm DepthMap) At(x, y int) int {
+func (dm DepthMap) At(x, y int) int { // nolint
 	p := image.Pt(x, y)
 
 	if p.In(dm.Rect) && p.In(dm.Obstacle) {
