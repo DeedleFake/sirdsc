@@ -50,6 +50,7 @@ func main() {
 	flat := flag.Bool("flat", false, "Generate an image with only two planes")
 	inverse := flag.Bool("inverse", false, "Treat darker pixels as closer in the depth map")
 	seed := flag.Int64("seed", int64(time.Since(time.Time{})), "Color generation seed")
+	sym := flag.Bool("sym", false, "Use symmetric generation")
 	patFile := flag.String("pat", "", "If not empty, use the specified file as the pattern instead of randomizing")
 	outFile := flag.String("o", "sirds.png", "Output file")
 	flag.Parse()
@@ -74,6 +75,9 @@ func main() {
 	}
 
 	pat := image.Image(sirdsc.RandImage(*seed))
+	if *sym {
+		pat = sirdsc.SymmetricRandImage(*seed)
+	}
 	if *patFile != "" {
 		pat, err = loadImage(*patFile)
 		if err != nil {
