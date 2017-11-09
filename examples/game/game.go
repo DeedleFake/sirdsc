@@ -5,7 +5,6 @@ import (
 	"image"
 	"log"
 	"math"
-	"math/rand"
 	"time"
 
 	"github.com/DeedleFake/sirdsc"
@@ -168,7 +167,7 @@ func main() {
 		}
 
 		img := out.Image()
-		sirdsc.Generate(img, dm, sirdsc.RandImage(rand.Uint64()), PartSize)
+		sirdsc.Generate(img, dm, sirdsc.RandImage(frames), PartSize)
 		img.Close()
 
 		ren.Copy(out, image.ZR, image.ZR)
