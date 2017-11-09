@@ -23,9 +23,9 @@ const (
 	// PartSize is the size of a part of the stererogram.
 	PartSize = 100
 
-	// FPSDelay is the number of seconds to in between each printing of
-	// the FPS.
-	FPSDelay = 5
+	// FPSDelay is the duration to wait in between each printing of the
+	// FPS.
+	FPSDelay = 5 * time.Second
 )
 
 // DepthMap is an implementation of sirdsc.DepthMap that 'draws'
@@ -111,8 +111,10 @@ func main() {
 	}
 
 	for start := range tick.C {
-		if sec := start.Sub(last.ts).Seconds(); sec > FPSDelay {
-			fmt.Printf("FPS: %v\n", 1/(sec/float64(frames-last.frame)))
+		// TODO: Scale movement speed.
+		fps := float64(frames-last.frame) / start.Sub(last.ts).Seconds()
+		if start.Sub(last.ts) > FPSDelay {
+			fmt.Printf("FPS: %v\n", fps)
 
 			last.ts = start
 			last.frame = frames
