@@ -21,11 +21,12 @@ import (
 func loadImage(file string) (image.Image, error) {
 	f := io.Reader(os.Stdin)
 	if (file != "") && (file != "-") {
-		f, err := os.Open(file)
+		tmp, err := os.Open(file)
 		if err != nil {
 			return nil, err
 		}
-		defer f.Close()
+		defer tmp.Close()
+		f = tmp
 	}
 
 	img, _, err := image.Decode(f)
@@ -36,11 +37,12 @@ func loadImage(file string) (image.Image, error) {
 func saveImage(file string, img image.Image) error {
 	f := io.Writer(os.Stdout)
 	if (file != "") && (file != "-") {
-		f, err := os.Create(file)
+		tmp, err := os.Create(file)
 		if err != nil {
 			return err
 		}
-		defer f.Close()
+		defer tmp.Close()
+		f = tmp
 	}
 
 	return png.Encode(f, img)
