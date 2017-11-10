@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"image"
 	_ "image/gif"
@@ -31,8 +32,8 @@ func getImage(url string) (image.Image, error) {
 	return img, err
 }
 
-func handleMain(rw http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(context.Background())
+func handleGenerate(rw http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
 
 	q := req.URL.Query()
@@ -143,10 +144,18 @@ func handleMain(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func main() {
-	http.HandleFunc("/", handleMain)
+func handleMain(rw http.ResponseWriter, req *http.Request) {
+}
 
-	err := http.ListenAndServe(":8080", nil)
+func main() {
+	root := flag.String("root", "./interface/build", "The directory containing the built interface.")
+	addr := flag.String("addr", ":8080", "The address to listen on.")
+	flag.Parse()
+
+	http.HandleFunc("/generate", handleGenerate)
+	http.Handle("/", http.FileServer(http.Dir(*root)))
+
+	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Printf("Failed to start server: %v", err)
 	}
