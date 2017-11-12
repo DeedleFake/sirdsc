@@ -1,15 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
 	"image"
-	_ "image/gif"
+	"image/color/palette"
+	"image/gif"
 	_ "image/jpeg"
 	"image/png"
+	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -21,15 +25,105 @@ func init() {
 	http.DefaultClient.Timeout = 5 * time.Second
 }
 
-func getImage(url string) (image.Image, error) {
+func getImage(url string, decodeGIFs bool) (interface{}, error) {
 	rsp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
 	defer rsp.Body.Close()
 
-	img, _, err := image.Decode(rsp.Body)
-	return img, err
+	var buf bytes.Buffer
+	r := io.TeeReader(rsp.Body, &buf)
+
+	img, name, err := image.Decode(r)
+	if !decodeGIFs || (name != "gif") {
+		return img, err
+	}
+
+	return gif.DecodeAll(io.MultiReader(&buf, rsp.Body))
+}
+
+func generateGIF(ctx context.Context, w io.Writer, img *gif.GIF, pat image.Image, q url.Values) error {
+	partSize, _ := strconv.ParseInt(q.Get("partsize"), 10, 0)
+	if partSize <= 0 {
+		partSize = 100
+	}
+
+	max, _ := strconv.ParseInt(q.Get("depth"), 10, 0)
+	if max <= 0 {
+		max = 40
+	}
+
+	eg, ctx := errgroup.WithContext(ctx)
+	for i := range img.Image {
+		i := i
+		eg.Go(func() error {
+			out := image.NewPaletted(image.Rect(
+				img.Image[i].Bounds().Min.X,
+				img.Image[i].Bounds().Min.Y,
+				img.Image[i].Bounds().Max.X+int(partSize),
+				img.Image[i].Bounds().Max.Y,
+			), palette.Plan9)
+
+			sirdsc.Generate(
+				out,
+				sirdsc.ImageDepthMap{
+					Image:   img.Image[i],
+					Max:     int(max),
+					Flat:    q.Get("flat") == "true",
+					Inverse: q.Get("inverse") == "true",
+				},
+				pat,
+				int(partSize),
+			)
+
+			img.Image[i] = out
+
+			return nil
+		})
+	}
+
+	img.Config.Width += int(partSize)
+
+	err := eg.Wait()
+	if err != nil {
+		return err
+	}
+
+	return gif.EncodeAll(w, img)
+}
+
+func generateImage(ctx context.Context, w io.Writer, img image.Image, pat image.Image, q url.Values) error {
+	partSize, _ := strconv.ParseInt(q.Get("partsize"), 10, 0)
+	if partSize <= 0 {
+		partSize = 100
+	}
+
+	max, _ := strconv.ParseInt(q.Get("depth"), 10, 0)
+	if max <= 0 {
+		max = 40
+	}
+
+	out := image.NewNRGBA(image.Rect(
+		img.Bounds().Min.X,
+		img.Bounds().Min.Y,
+		img.Bounds().Max.X+int(partSize),
+		img.Bounds().Max.Y,
+	))
+
+	sirdsc.Generate(
+		out,
+		sirdsc.ImageDepthMap{
+			Image:   img,
+			Max:     int(max),
+			Flat:    q.Get("flat") == "true",
+			Inverse: q.Get("inverse") == "true",
+		},
+		pat,
+		int(partSize),
+	)
+
+	return png.Encode(w, out)
 }
 
 func handleGenerate(rw http.ResponseWriter, req *http.Request) {
@@ -44,7 +138,7 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	imgC := make(chan image.Image, 1)
+	imgC := make(chan interface{}, 1)
 	patC := make(chan image.Image, 1)
 
 	eg, ctx := errgroup.WithContext(ctx)
@@ -56,11 +150,11 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 			pat = sirdsc.SymmetricRandImage(seed)
 		}
 		if patsrc := q.Get("pat"); patsrc != "" {
-			tmp, err := getImage(patsrc)
+			tmp, err := getImage(patsrc, false)
 			if err != nil {
 				return fmt.Errorf("Failed to get pattern from %q: %v", patsrc, err)
 			}
-			pat = tmp
+			pat = tmp.(image.Image)
 		}
 
 		select {
@@ -72,7 +166,7 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 	})
 
 	eg.Go(func() error {
-		img, err := getImage(src)
+		img, err := getImage(src, true)
 		if err != nil {
 			return fmt.Errorf("Failed to get depth map from %q: %v", src, err)
 		}
@@ -86,29 +180,12 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 	})
 
 	eg.Go(func() error {
-		partSize, _ := strconv.ParseInt(q.Get("partsize"), 10, 0)
-		if partSize <= 0 {
-			partSize = 100
-		}
-
-		max, _ := strconv.ParseInt(q.Get("depth"), 10, 0)
-		if max <= 0 {
-			max = 40
-		}
-
-		var img image.Image
+		var img interface{}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case img = <-imgC:
 		}
-
-		out := image.NewNRGBA(image.Rect(
-			img.Bounds().Min.X,
-			img.Bounds().Min.Y,
-			img.Bounds().Max.X+int(partSize),
-			img.Bounds().Max.Y,
-		))
 
 		var pat image.Image
 		select {
@@ -117,19 +194,13 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 		case pat = <-patC:
 		}
 
-		sirdsc.Generate(
-			out,
-			sirdsc.ImageDepthMap{
-				Image:   img,
-				Max:     int(max),
-				Flat:    q.Get("flat") == "true",
-				Inverse: q.Get("inverse") == "true",
-			},
-			pat,
-			int(partSize),
-		)
-
-		err := png.Encode(rw, out)
+		var err error
+		switch img := img.(type) {
+		case *gif.GIF:
+			err = generateGIF(ctx, rw, img, pat, q)
+		case image.Image:
+			err = generateImage(ctx, rw, img, pat, q)
+		}
 		if err != nil {
 			return fmt.Errorf("Failed to encode image from %q: %v", src, err)
 		}
