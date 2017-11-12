@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"log"
 	"math"
 	"time"
@@ -57,13 +58,37 @@ func (dm DepthMap) At(x, y int) int { // nolint
 	return 0
 }
 
-func toImageRect(r pixel.Rect) image.Rectangle {
+type PictureImage pixel.PictureData
+
+func (img PictureImage) ColorModel() color.Model {
+	return color.RGBAModel
+}
+
+func (img PictureImage) Bounds() image.Rectangle {
 	return image.Rect(
-		int(r.Min.X),
-		int(r.Min.Y),
-		int(r.Max.X),
-		int(r.Max.Y),
+		int(img.Rect.Min.X),
+		int(img.Rect.Min.Y),
+		int(img.Rect.Max.X),
+		int(img.Rect.Max.Y),
 	)
+}
+
+func (img PictureImage) index(x, y int) int {
+	y = int(img.Rect.Max.Y) - 1 - y
+	return (y * img.Stride) + x
+}
+
+func (img PictureImage) At(x, y int) color.Color {
+	return img.Pix[img.index(x, y)]
+}
+
+func (img PictureImage) Set(x, y int, c color.Color) {
+	i := img.index(x, y)
+	img.Pix[i] = img.ColorModel().Convert(c).(color.RGBA)
+}
+
+func (img *PictureImage) PictureData() *pixel.PictureData {
+	return (*pixel.PictureData)(img)
 }
 
 func main() {
@@ -79,7 +104,7 @@ func main() {
 		defer win.Destroy()
 		win.SetMatrix(pixel.IM.Moved(win.Bounds().Center()))
 
-		out := image.NewNRGBA(toImageRect(win.Bounds()))
+		out := (*PictureImage)(pixel.MakePictureData(win.Bounds()))
 
 		dm := DepthMap{
 			Depth: 10,
@@ -152,8 +177,7 @@ func main() {
 			}
 
 			sirdsc.Generate(out, dm, sirdsc.RandImage(seed), PartSize)
-			pic := pixel.PictureDataFromImage(out)
-			s := pixel.NewSprite(pic, pic.Bounds())
+			s := pixel.NewSprite(out.PictureData(), out.PictureData().Bounds())
 			s.Draw(win, pixel.IM)
 
 			win.Update()
