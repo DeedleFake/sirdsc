@@ -78,12 +78,17 @@ class Form extends Component {
 	render() {
 		return (
 			<form className='Form' onSubmit={this.onSubmit.bind(this)}>
-				{this.inputs.map((v, i) => {
-					let {label, ...attr} = v;
-					return <div key={attr.name}>{label}: <input {...attr} /></div>;
-				})}
-
-				<input type='submit' value='Display' />
+				<div className='row'>
+					{this.inputs.map((v, i) => {
+						let {label, ...attr} = v;
+						return (
+							<div key={attr.name} className='section'>
+								<span className='label'>{label}</span>
+								<input {...attr} onChange={this.onSubmit.bind(this)} />
+							</div>
+						);
+					})}
+				</div>
 			</form>
 		);
 	}
