@@ -56,8 +56,6 @@ class Form extends Component {
 	];
 
 	onSubmit(ev) {
-		ev.preventDefault()
-
 		this.props.onSubmit(this.inputs.reduce((p, v) => {
 			const attrOf = (name, attr = 'value') => document.querySelector(`.Form input[name=${name}]`)[attr];
 
@@ -78,13 +76,11 @@ class Form extends Component {
 
 			return p;
 		}, {}));
-
-		return false;
 	}
 
 	render() {
 		return (
-			<form className='Form' onSubmit={this.onSubmit.bind(this)}>
+			<form className='Form' onSubmit={(ev) => {ev.preventDefault(); this.onSubmit.bind(this); return false}}>
 				<div className='row'>
 					{this.inputs.map((v, i) => {
 						let {label, ...attr} = v;
