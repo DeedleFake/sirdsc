@@ -14,6 +14,13 @@ class Form extends Component {
 			name: 'pat',
 		},
 		{
+			label: 'Seed',
+			type: 'number',
+			name: 'seed',
+
+			defaultValue: 0,
+		},
+		{
 			label: 'Part Size',
 			type: 'number',
 			name: 'partsize',
