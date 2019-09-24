@@ -1,133 +1,137 @@
-import React, { Component } from 'react';
-import './App.css';
+// @format
 
-class Form extends Component {
-	inputs = [
-		{
-			label: 'Depth Map',
-			type: 'text',
-			name: 'src',
-		},
-		{
-			label: 'Pattern',
-			type: 'text',
-			name: 'pat',
-		},
-		{
-			label: 'Seed',
-			type: 'number',
-			name: 'seed',
+import React, { useState, useMemo, useReducer, useEffect } from 'react'
 
-			defaultValue: 0,
-		},
-		{
-			label: 'Part Size',
-			type: 'number',
-			name: 'partsize',
+import './App.css'
 
-			defaultValue: 100,
-			min: 0,
-			max: 500,
-		},
-		{
-			label: 'Max Depth',
-			type: 'number',
-			name: 'depth',
+const formInputs = [
+	{
+		label: 'Depth Map',
+		type: 'text',
+		name: 'src',
+	},
+	{
+		label: 'Pattern',
+		type: 'text',
+		name: 'pat',
+	},
+	{
+		label: 'Seed',
+		type: 'number',
+		name: 'seed',
 
-			defaultValue: 40,
-			min: 0,
-			max: 50,
-		},
-		{
-			label: 'Symmetric Random Generation',
-			type: 'checkbox',
-			name: 'sym',
-		},
-		{
-			label: 'Inverse',
-			type: 'checkbox',
-			name: 'inverse',
-		},
-		{
-			label: 'Flat',
-			type: 'checkbox',
-			name: 'flat',
-		},
-	];
+		defaultValue: 0,
+	},
+	{
+		label: 'Part Size',
+		type: 'number',
+		name: 'partsize',
 
-	onSubmit(ev) {
-		this.props.onSubmit(this.inputs.reduce((p, v) => {
-			const attrOf = (name, attr = 'value') => document.querySelector(`.Form input[name=${name}]`)[attr];
+		defaultValue: 100,
+		min: 0,
+		max: 500,
+	},
+	{
+		label: 'Max Depth',
+		type: 'number',
+		name: 'depth',
 
-			switch (v.type) {
-				case 'text':
-				case 'number':
-					p[v.name] = attrOf(v.name);
-					break;
+		defaultValue: 40,
+		min: 0,
+		max: 50,
+	},
+	{
+		label: 'Symmetric Random Generation',
+		type: 'checkbox',
+		name: 'sym',
+	},
+	{
+		label: 'Inverse',
+		type: 'checkbox',
+		name: 'inverse',
+	},
+	{
+		label: 'Flat',
+		type: 'checkbox',
+		name: 'flat',
+	},
+]
 
-				case 'checkbox':
-					p[v.name] = attrOf(v.name, 'checked');
-					break;
-
-				default:
-					console.error(`Unexpected input type for ${v.name}: ${v.type}`);
-					break;
-			}
-
-			return p;
-		}, {}));
-	}
-
-	render() {
-		return (
-			<form className='Form' onSubmit={(ev) => {ev.preventDefault(); this.onSubmit.bind(this); return false}}>
-				<div className='row'>
-					{this.inputs.map((v, i) => {
-						let {label, ...attr} = v;
-						return (
-							<div key={attr.name} className='section'>
-								<span className='label'>{label}</span>
-								<input {...attr} onChange={this.onSubmit.bind(this)} />
-							</div>
-						);
-					})}
-				</div>
-			</form>
-		);
-	}
+const defaultValues = {
+	text: '',
+	number: 0,
+	checkbox: false,
 }
 
-function Display({params, ...props}) {
-	let q = [];
-	for (let f in params) {
-		q.push(encodeURIComponent(f) + '=' + encodeURIComponent(params[f]));
-	}
+const getValue = {
+	text: (ev) => ev.target.value,
+	number: (ev) => (!isNaN(ev.target.value) ? parseFloat(ev.target.value) : ''),
+	checkbox: (ev) => ev.target.checked,
+}
 
-	// TODO: Display something to indicate loading.
+const Form = ({ onSubmit }) => {
+	const [values, setValues] = useReducer(
+		(values, action) => ({ ...values, ...action }),
+		formInputs,
+		(inputs) =>
+			Object.fromEntries(
+				inputs.map(({ name, type, defaultValue }) => [
+					name,
+					defaultValue || defaultValues[type],
+				]),
+			),
+	)
+
+	useEffect(() => {
+		onSubmit(values)
+	}, [values, onSubmit])
+
 	return (
-		<img className={params.src !== undefined ? 'Display' : ''} alt='' src={'/generate?' + q.join('&')} />
-	);
-}
-
-class App extends Component {
-	state = {
-		params: {},
-	};
-
-	onSubmit(params) {
-		this.setState({
-			params: params,
-		});
-	}
-
-  render() {
-    return (
-			<div className='App'>
-				<Form onSubmit={this.onSubmit.bind(this)} />
-				<Display params={this.state.params} />
+		<div className="Form">
+			<div className="row">
+				{formInputs.map(({ label, defaultValue, ...attr }) => (
+					<div key={attr.name} className="section">
+						<span className="label">{label}</span>
+						<input
+							{...attr}
+							value={values[attr.name]}
+							onChange={(ev) =>
+								setValues({ [attr.name]: getValue[attr.type](ev) })
+							}
+						/>
+					</div>
+				))}
 			</div>
-    );
-  }
+		</div>
+	)
 }
 
-export default App;
+const Display = ({ params }) => {
+	const query = useMemo(() => {
+		let q = Object.entries(params).map(
+			([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`,
+		)
+		return `http://localhost:8080/generate?${q.join('&')}`
+	}, [params])
+
+	return (
+		<img
+			className={params.src != null ? 'Display' : ''}
+			alt="Display"
+			src={query}
+		/>
+	)
+}
+
+const App = () => {
+	const [params, setParams] = useState({})
+
+	return (
+		<div className="App">
+			<Form onSubmit={(params) => setParams(params)} />
+			<Display params={params} />
+		</div>
+	)
+}
+
+export default App
