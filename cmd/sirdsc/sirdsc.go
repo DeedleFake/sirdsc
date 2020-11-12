@@ -87,9 +87,9 @@ func main() {
 		Inverse: *inverse,
 	}
 
-	pat := image.Image(sirdsc.RandImage(*seed))
+	pat := image.Image(&sirdsc.RandImage{Seed: *seed})
 	if *sym {
-		pat = sirdsc.SymmetricRandImage(*seed)
+		pat = &sirdsc.SymmetricRandImage{Seed: *seed}
 	}
 	if *patFile != "" {
 		pat, err = loadImage(*patFile)
