@@ -25,7 +25,7 @@ func (img RandImage) Bounds() image.Rectangle {
 	return image.Rect(-1e9, -1e9, 1e9, 1e9)
 }
 
-func (img *RandImage) At(x, y int) color.Color {
+func (img RandImage) At(x, y int) color.Color {
 	c, _, _ := spcg.Next(uint64(x)^img.Seed, uint64(y)^img.Seed)
 
 	return color.RGBA{
@@ -50,7 +50,7 @@ func (img SymmetricRandImage) Bounds() image.Rectangle {
 	return image.Rect(-1e9, -1e9, 1e9, 1e9)
 }
 
-func (img *SymmetricRandImage) At(x, y int) color.Color {
+func (img SymmetricRandImage) At(x, y int) color.Color {
 	c, _, _ := spcg.Next(uint64(x^y)^img.Seed, uint64(x^y)^img.Seed)
 
 	return color.RGBA{
