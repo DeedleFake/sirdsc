@@ -58,7 +58,7 @@ func main() {
 	maxDepth := flag.Int("depth", sirdsc.DefaultMaxImageDepth, "Maximum depth")
 	flat := flag.Bool("flat", false, "Generate an image with only two planes")
 	inverse := flag.Bool("inverse", false, "Treat darker pixels as closer in the depth map")
-	seed := flag.Int64("seed", int64(time.Since(time.Time{})), "Color generation seed")
+	seed := flag.Uint64("seed", uint64(time.Now().UnixNano()), "Color generation seed")
 	sym := flag.Bool("sym", false, "Use symmetric generation")
 	patFile := flag.String("pat", "", "If not empty, use the specified file as the pattern instead of randomizing")
 	outFile := flag.String("o", "", "Output file")
@@ -87,9 +87,9 @@ func main() {
 		Inverse: *inverse,
 	}
 
-	pat := image.Image(sirdsc.RandImage(*seed))
+	pat := image.Image(&sirdsc.RandImage{Seed: *seed})
 	if *sym {
-		pat = sirdsc.SymmetricRandImage(*seed)
+		pat = &sirdsc.SymmetricRandImage{Seed: *seed}
 	}
 	if *patFile != "" {
 		pat, err = loadImage(*patFile)

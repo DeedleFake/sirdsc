@@ -1,15 +1,18 @@
 module github.com/DeedleFake/sirdsc
 
-go 1.13
+go 1.17
 
 require (
-	github.com/faiface/glhf v0.0.0-20181018222622-82a6317ac380 // indirect
+	github.com/faiface/pixel v0.10.0
+	golang.org/x/image v0.0.0-20211028202545-6944b10bf410
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+)
+
+require (
+	github.com/faiface/glhf v0.0.0-20211013000516-57b20770c369 // indirect
 	github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3 // indirect
-	github.com/faiface/pixel v0.8.0
-	github.com/go-gl/gl v0.0.0-20190320180904-bf2b1f2f34d7 // indirect
-	github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1 // indirect
-	github.com/go-gl/mathgl v0.0.0-20190713194549-592312d8590a // indirect
-	github.com/pkg/errors v0.8.1 // indirect
-	golang.org/x/image v0.0.0-20190910094157-69e4b8554b2a
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
+	github.com/go-gl/gl v0.0.0-20211025173605-bda47ffaa784 // indirect
+	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20211024062804-40e447a793be // indirect
+	github.com/go-gl/mathgl v1.0.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 )

@@ -28,7 +28,7 @@ func (img subImage) At(x, y int) color.Color {
 func TestTiledImage(t *testing.T) {
 	img := sirdsc.TiledImage{
 		Image: subImage{
-			img:  sirdsc.RandImage(1),
+			img:  &sirdsc.RandImage{Seed: 1},
 			rect: image.Rect(0, 0, 5, 5),
 		},
 	}
