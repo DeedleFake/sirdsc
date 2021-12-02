@@ -3,9 +3,8 @@ package sirdsc
 import (
 	"image"
 	"image/color"
-	"sync"
 
-	"github.com/dgryski/go-pcgr"
+	"github.com/DeedleFake/sirdsc/spcg"
 )
 
 // A RandImage deterministically generates random color values for
@@ -15,10 +14,7 @@ import (
 //
 // A RandImage has infinite size.
 type RandImage struct {
-	Seed int64
-
-	m    sync.Mutex
-	rand pcgr.Rand
+	Seed uint64
 }
 
 func (img RandImage) ColorModel() color.Model {
@@ -30,11 +26,7 @@ func (img RandImage) Bounds() image.Rectangle {
 }
 
 func (img *RandImage) At(x, y int) color.Color {
-	img.m.Lock()
-	defer img.m.Unlock()
-
-	img.rand.SeedWithState(int64(x)^img.Seed, int64(y)^img.Seed)
-	c := img.rand.Next()
+	c, _, _ := spcg.Next(uint64(x)^img.Seed, uint64(y)^img.Seed)
 
 	return color.RGBA{
 		R: uint8(c),
@@ -47,10 +39,7 @@ func (img *RandImage) At(x, y int) color.Color {
 // A SymmetricRandImage is a variant of RandImage that is symmetric,
 // such that a pixel at (a, b) is equal to a pixel at (b, a).
 type SymmetricRandImage struct {
-	Seed int64
-
-	m    sync.Mutex
-	rand pcgr.Rand
+	Seed uint64
 }
 
 func (img SymmetricRandImage) ColorModel() color.Model {
@@ -62,11 +51,7 @@ func (img SymmetricRandImage) Bounds() image.Rectangle {
 }
 
 func (img *SymmetricRandImage) At(x, y int) color.Color {
-	img.m.Lock()
-	defer img.m.Unlock()
-
-	img.rand.SeedWithState(int64(x^y)^img.Seed, int64(x^y)^img.Seed)
-	c := img.rand.Next()
+	c, _, _ := spcg.Next(uint64(x^y)^img.Seed, uint64(x^y)^img.Seed)
 
 	return color.RGBA{
 		R: uint8(c),
