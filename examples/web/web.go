@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"embed"
 	"flag"
 	"fmt"
 	"image"
@@ -11,6 +12,7 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
@@ -21,7 +23,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+//go:embed interface/public/build
+var fsys embed.FS
+
 func init() {
+	// TODO: Replace with context usage.
 	http.DefaultClient.Timeout = 5 * time.Second
 }
 
@@ -143,11 +149,11 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		seed, _ := strconv.ParseInt(q.Get("seed"), 10, 0)
+		seed, _ := strconv.ParseUint(q.Get("seed"), 10, 0)
 
-		pat := image.Image(sirdsc.RandImage(seed))
+		pat := image.Image(sirdsc.RandImage{Seed: seed})
 		if q.Get("sym") == "true" {
-			pat = sirdsc.SymmetricRandImage(seed)
+			pat = sirdsc.SymmetricRandImage{Seed: seed}
 		}
 		if patsrc := q.Get("pat"); patsrc != "" {
 			tmp, err := getImage(patsrc, false)
@@ -215,19 +221,21 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func handleMain(rw http.ResponseWriter, req *http.Request) {
-}
-
 func main() {
-	root := flag.String("root", "./interface/build", "The directory containing the built interface.")
 	addr := flag.String("addr", ":8080", "The address to listen on.")
 	flag.Parse()
 
-	http.HandleFunc("/generate", handleGenerate)
-	http.Handle("/", http.FileServer(http.Dir(*root)))
-
-	err := http.ListenAndServe(*addr, nil)
+	sub, err := fs.Sub(fsys, "interface/public")
 	if err != nil {
-		log.Printf("Failed to start server: %v", err)
+		log.Fatalf("Failed to create sub FS: %v", err)
+	}
+
+	http.HandleFunc("/generate", handleGenerate)
+	http.Handle("/", http.FileServer(http.FS(sub)))
+
+	log.Printf("Starting server on %q", *addr)
+	err = http.ListenAndServe(*addr, nil)
+	if err != nil {
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }
