@@ -7,11 +7,6 @@ package spcg
 
 import "math/bits"
 
-type pcg struct {
-	low  uint64
-	high uint64
-}
-
 const (
 	maxUint64 = (1 << 64) - 1
 
