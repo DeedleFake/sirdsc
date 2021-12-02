@@ -23,7 +23,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-//go:embed interface/public/build
+//go:embed interface/public
 var fsys embed.FS
 
 func init() {
@@ -221,6 +221,14 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func logHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		log.Printf("%v: %v %v", req.RemoteAddr, req.Method, req.URL)
+
+		h.ServeHTTP(rw, req)
+	})
+}
+
 func main() {
 	addr := flag.String("addr", ":8080", "The address to listen on.")
 	flag.Parse()
@@ -230,8 +238,8 @@ func main() {
 		log.Fatalf("Failed to create sub FS: %v", err)
 	}
 
-	http.HandleFunc("/generate", handleGenerate)
-	http.Handle("/", http.FileServer(http.FS(sub)))
+	http.Handle("/generate", logHandler(http.HandlerFunc(handleGenerate)))
+	http.Handle("/", logHandler(http.FileServer(http.FS(sub))))
 
 	log.Printf("Starting server on %q", *addr)
 	err = http.ListenAndServe(*addr, nil)
