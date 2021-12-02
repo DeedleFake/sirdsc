@@ -22,4 +22,7 @@ jobs:
       run: go build -v $(comm -3 <(go list ./...) <(go list ./examples/...))
 
     - name: Test
-      run: go test -v $(comm -3 <(go list ./...) <(go list ./examples/...))
+      run: go test -v ./...
+      
+    - name: Test (Race)
+      run: go test -v -race ./...
