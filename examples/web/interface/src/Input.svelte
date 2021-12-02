@@ -1,3 +1,14 @@
+<style>
+	.input {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+
+		margin: 4px 4px;
+	}
+</style>
+
 <script>
 	const defaults = {
 		text: '',
@@ -31,7 +42,7 @@
 	}
 </script>
 
-<div class='section'>
+<div class='input'>
 	<span class='label'>{label}</span>
 	<input {...$$restProps} {type} {value} on:input={handle} />
 </div>

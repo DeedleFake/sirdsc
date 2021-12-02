@@ -1,3 +1,10 @@
+<style>
+	.display {
+		flex: 0 1 100%;
+		margin: 8px;
+	}
+</style>
+
 <script>
 	export let params
 
@@ -6,5 +13,5 @@
 </script>
 
 {#if params['src']}
-	<img alt='Display' {src} />
+	<img class='display' alt='Display' {src} />
 {/if}
