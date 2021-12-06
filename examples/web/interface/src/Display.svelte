@@ -6,6 +6,7 @@
 </style>
 
 <script>
+	export let alt = 'Display'
 	export let params
 
 	$: query = Object.entries(params).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
@@ -13,5 +14,5 @@
 </script>
 
 {#if params['src']}
-	<img class='display' alt='Display' {src} />
+	<img class='display' {alt} {src} />
 {/if}

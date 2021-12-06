@@ -21,28 +21,15 @@
 	
 	export let defaultValue = defaults[type]
 	export let value = defaultValue
-	
-	const handle = (ev) => {
-		switch (type) {
-			case 'text':
-				value = ev.target.value
-				break
-				
-			case 'number':
-				value = !isNaN(ev.target.value) ? parseFloat(ev.target.value) : 0
-				break
-				
-			case 'checkbox':
-				value = ev.target.checked
-				break
-				
-			default:
-				throw new Error(`invalid input type: ${type}`)
-		}
-	}
 </script>
 
 <div class='input'>
 	<span class='label'>{label}</span>
-	<input {...$$restProps} {type} {value} on:input={handle} />
+	{#if type === 'text'}
+		<input type="text" {...$$restProps} bind:value />
+	{:else if type === 'number'}
+		<input type="number" {...$$restProps} bind:value />
+	{:else if type === 'checkbox'}
+		<input type="checkbox" {...$$restProps} bind:value />
+	{/if}
 </div>
