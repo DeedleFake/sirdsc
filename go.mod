@@ -4,8 +4,8 @@ go 1.17
 
 require (
 	github.com/faiface/pixel v0.10.0
-	golang.org/x/image v0.0.0-20211028202545-6944b10bf410
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/image v0.5.0
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 )
 
 require (
