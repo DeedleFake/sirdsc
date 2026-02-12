@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/DeedleFake/sirdsc"
-	"github.com/faiface/pixel"
-	"github.com/faiface/pixel/pixelgl"
+	"github.com/gopxl/pixel/v2"
+	"github.com/gopxl/pixel/v2/backends/opengl"
 )
 
 const (
@@ -92,8 +92,8 @@ func (img *PictureImage) PictureData() *pixel.PictureData {
 }
 
 func main() {
-	pixelgl.Run(func() {
-		win, err := pixelgl.NewWindow(pixelgl.WindowConfig{
+	opengl.Run(func() {
+		win, err := opengl.NewWindow(opengl.WindowConfig{
 			Title:  "SIRDS",
 			Bounds: pixel.R(0, 0, ScreenWidth+PartSize, ScreenHeight),
 			VSync:  true,
@@ -142,27 +142,27 @@ func main() {
 				last.frame = frames
 			}
 
-			if win.Pressed(pixelgl.KeyUp) {
+			if win.Pressed(pixel.KeyUp) {
 				dm.Rect.Min.Y -= 10
 				dm.Rect.Max.Y -= 10
 			}
-			if win.Pressed(pixelgl.KeyDown) {
+			if win.Pressed(pixel.KeyDown) {
 				dm.Rect.Min.Y += 10
 				dm.Rect.Max.Y += 10
 			}
-			if win.Pressed(pixelgl.KeyLeft) {
+			if win.Pressed(pixel.KeyLeft) {
 				dm.Rect.Min.X -= 10
 				dm.Rect.Max.X -= 10
 			}
-			if win.Pressed(pixelgl.KeyRight) {
+			if win.Pressed(pixel.KeyRight) {
 				dm.Rect.Min.X += 10
 				dm.Rect.Max.X += 10
 			}
 
-			if win.Pressed(pixelgl.KeyW) {
+			if win.Pressed(pixel.KeyW) {
 				dm.Depth--
 			}
-			if win.Pressed(pixelgl.KeyS) {
+			if win.Pressed(pixel.KeyS) {
 				dm.Depth++
 			}
 			if dm.Depth < 5 {
