@@ -176,7 +176,7 @@ func main() {
 				seed = s
 			}
 
-			sirdsc.Generate(out, dm, sirdsc.RandImage(seed), PartSize)
+			sirdsc.Generate(out, dm, sirdsc.RandImage{Seed: uint64(seed)}, PartSize)
 			s := pixel.NewSprite(out.PictureData(), out.PictureData().Bounds())
 			s.Draw(win, pixel.IM)
 
