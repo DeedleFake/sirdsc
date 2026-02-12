@@ -31,7 +31,7 @@ func init() {
 	http.DefaultClient.Timeout = 5 * time.Second
 }
 
-func getImage(url string, decodeGIFs bool) (interface{}, error) {
+func getImage(url string, decodeGIFs bool) (any, error) {
 	rsp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,6 @@ func generateGIF(ctx context.Context, w io.Writer, img *gif.GIF, pat image.Image
 
 	eg, ctx := errgroup.WithContext(ctx)
 	for i := range img.Image {
-		i := i
 		eg.Go(func() error {
 			out := image.NewPaletted(image.Rect(
 				img.Image[i].Bounds().Min.X,
@@ -144,7 +143,7 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	imgC := make(chan interface{}, 1)
+	imgC := make(chan any, 1)
 	patC := make(chan image.Image, 1)
 
 	eg, ctx := errgroup.WithContext(ctx)
@@ -186,7 +185,7 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 	})
 
 	eg.Go(func() error {
-		var img interface{}
+		var img any
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
