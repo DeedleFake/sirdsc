@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"errors"
 	"flag"
 	"fmt"
 	"image"
@@ -12,29 +13,31 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"io"
-	"io/fs"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
+	"reflect"
 	"strconv"
-	"time"
 
 	"github.com/DeedleFake/sirdsc"
 	"golang.org/x/sync/errgroup"
 )
 
-//go:embed interface/public
-var fsys embed.FS
+//go:generate bun run --bun build
 
-func init() {
-	// TODO: Replace with context usage.
-	http.DefaultClient.Timeout = 5 * time.Second
-}
+//go:embed dist
+var distFS embed.FS
 
-func getImage(url string, decodeGIFs bool) (any, error) {
-	rsp, err := http.Get(url)
+func getImage(ctx context.Context, url string) (any, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	rsp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("send request: %w", err)
 	}
 	defer rsp.Body.Close()
 
@@ -42,11 +45,18 @@ func getImage(url string, decodeGIFs bool) (any, error) {
 	r := io.TeeReader(rsp.Body, &buf)
 
 	img, name, err := image.Decode(r)
-	if !decodeGIFs || (name != "gif") {
-		return img, err
+	if err != nil {
+		return nil, fmt.Errorf("decode image: %w", err)
+	}
+	if name != "gif" {
+		return img, nil
 	}
 
-	return gif.DecodeAll(io.MultiReader(&buf, rsp.Body))
+	g, err := gif.DecodeAll(io.MultiReader(&buf, rsp.Body))
+	if err != nil {
+		return nil, fmt.Errorf("decode GIF: %w", err)
+	}
+	return g, nil
 }
 
 func generateGIF(ctx context.Context, w io.Writer, img *gif.GIF, pat image.Image, q url.Values) error {
@@ -98,7 +108,7 @@ func generateGIF(ctx context.Context, w io.Writer, img *gif.GIF, pat image.Image
 	return gif.EncodeAll(w, img)
 }
 
-func generateImage(ctx context.Context, w io.Writer, img image.Image, pat image.Image, q url.Values) error {
+func generateImage(w io.Writer, img image.Image, pat image.Image, q url.Values) error {
 	partSize, _ := strconv.ParseInt(q.Get("partsize"), 10, 0)
 	if partSize <= 0 {
 		partSize = 100
@@ -155,11 +165,18 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 			pat = sirdsc.SymmetricRandImage{Seed: seed}
 		}
 		if patsrc := q.Get("pat"); patsrc != "" {
-			tmp, err := getImage(patsrc, false)
+			tmp, err := getImage(ctx, patsrc)
 			if err != nil {
 				return fmt.Errorf("Failed to get pattern from %q: %v", patsrc, err)
 			}
-			pat = tmp.(image.Image)
+			switch tmp := tmp.(type) {
+			case image.Image:
+				pat = tmp
+			case *gif.GIF:
+				return errors.New("pattern must not be a GIF")
+			default:
+				panic(reflect.TypeOf(tmp))
+			}
 		}
 
 		select {
@@ -171,7 +188,7 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 	})
 
 	eg.Go(func() error {
-		img, err := getImage(src, true)
+		img, err := getImage(ctx, src)
 		if err != nil {
 			return fmt.Errorf("Failed to get depth map from %q: %v", src, err)
 		}
@@ -204,7 +221,9 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 		case *gif.GIF:
 			err = generateGIF(ctx, rw, img, pat, q)
 		case image.Image:
-			err = generateImage(ctx, rw, img, pat, q)
+			err = generateImage(rw, img, pat, q)
+		default:
+			panic(reflect.TypeOf(img))
 		}
 		if err != nil {
 			return fmt.Errorf("Failed to encode image from %q: %v", src, err)
@@ -216,13 +235,17 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 	err := eg.Wait()
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		log.Println(err)
+		slog.Error("generate failed", "err", err)
 	}
+}
+
+func handleIndex(rw http.ResponseWriter, req *http.Request) {
+	http.ServeFileFS(rw, req, distFS, "dist/index.html")
 }
 
 func logHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		log.Printf("%v: %v %v", req.RemoteAddr, req.Method, req.URL)
+		slog.Info("request", "remote", req.RemoteAddr, "method", req.Method, "url", req.URL)
 
 		h.ServeHTTP(rw, req)
 	})
@@ -232,17 +255,14 @@ func main() {
 	addr := flag.String("addr", ":8080", "The address to listen on.")
 	flag.Parse()
 
-	sub, err := fs.Sub(fsys, "interface/public")
-	if err != nil {
-		log.Fatalf("Failed to create sub FS: %v", err)
-	}
+	http.Handle("POST /generate", logHandler(http.HandlerFunc(handleGenerate)))
+	http.Handle("GET /dist/", logHandler(http.FileServerFS(distFS)))
+	http.Handle("GET /", logHandler(http.HandlerFunc(handleIndex)))
 
-	http.Handle("/generate", logHandler(http.HandlerFunc(handleGenerate)))
-	http.Handle("/", logHandler(http.FileServer(http.FS(sub))))
-
-	log.Printf("Starting server on %q", *addr)
-	err = http.ListenAndServe(*addr, nil)
+	slog.Info("starting server", "addr", *addr)
+	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		slog.Error("failed to start server", "err", err)
+		os.Exit(1)
 	}
 }
