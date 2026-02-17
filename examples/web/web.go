@@ -59,6 +59,31 @@ func getImage(ctx context.Context, url string) (any, error) {
 	return g, nil
 }
 
+func getPattern(ctx context.Context, q url.Values) (image.Image, error) {
+	seed, _ := strconv.ParseUint(q.Get("seed"), 10, 0)
+
+	patsrc := q.Get("pat")
+	if patsrc == "" {
+		if q.Get("sym") == "true" {
+			return sirdsc.SymmetricRandImage{Seed: seed}, nil
+		}
+		return sirdsc.RandImage{Seed: seed}, nil
+	}
+
+	pat, err := getImage(ctx, patsrc)
+	if err != nil {
+		return nil, fmt.Errorf("get image: %w", err)
+	}
+	switch pat := pat.(type) {
+	case image.Image:
+		return pat, nil
+	case *gif.GIF:
+		return nil, errors.New("pattern must not be a GIF")
+	default:
+		panic(reflect.TypeOf(pat))
+	}
+}
+
 func generateGIF(ctx context.Context, w io.Writer, img *gif.GIF, pat image.Image, q url.Values) error {
 	partSize, _ := strconv.ParseInt(q.Get("partsize"), 10, 0)
 	if partSize <= 0 {
@@ -159,30 +184,14 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		seed, _ := strconv.ParseUint(q.Get("seed"), 10, 0)
-
-		pat := image.Image(sirdsc.RandImage{Seed: seed})
-		if q.Get("sym") == "true" {
-			pat = sirdsc.SymmetricRandImage{Seed: seed}
-		}
-		if patsrc := q.Get("pat"); patsrc != "" {
-			tmp, err := getImage(ctx, patsrc)
-			if err != nil {
-				return fmt.Errorf("get image: %w", err)
-			}
-			switch tmp := tmp.(type) {
-			case image.Image:
-				pat = tmp
-			case *gif.GIF:
-				return errors.New("pattern must not be a GIF")
-			default:
-				panic(reflect.TypeOf(tmp))
-			}
+		pat, err := getPattern(ctx, q)
+		if err != nil {
+			return fmt.Errorf("get pattern: %w", err)
 		}
 
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return context.Cause(ctx)
 		case patC <- pat:
 			return nil
 		}
@@ -196,7 +205,7 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return context.Cause(ctx)
 		case imgC <- img:
 			return nil
 		}
@@ -204,17 +213,14 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 
 	eg.Go(func() error {
 		var img any
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case img = <-imgC:
-		}
-
 		var pat image.Image
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case pat = <-patC:
+		for img == nil || pat == nil {
+			select {
+			case <-ctx.Done():
+				return context.Cause(ctx)
+			case img = <-imgC:
+			case pat = <-patC:
+			}
 		}
 
 		var err error
