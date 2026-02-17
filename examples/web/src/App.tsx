@@ -7,7 +7,7 @@ export function App() {
 
   return (
     <div className="flex flex-col items-center">
-      <div className="flex flex-col bg-base-300 m-4 p-4 pt-25 transform-[translate(0px,-100px)] rounded-lg shadow">
+      <div className="flex flex-col bg-base-300 m-4 p-4 pt-25 transform-[translate(0px,-100px)] rounded-lg shadow-lg">
         <div className="flex flex-row justify-end mx-0 my-2">
           <Input label="Depth Map" {...inputs.text("src")} />
           <Input label="Pattern" {...inputs.text("pat")} />
