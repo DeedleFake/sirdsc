@@ -45,10 +45,10 @@ func getImage(ctx context.Context, url string) (any, error) {
 	r := io.TeeReader(rsp.Body, &buf)
 
 	img, name, err := image.Decode(r)
-	if err != nil {
-		return nil, fmt.Errorf("decode image: %w", err)
-	}
 	if name != "gif" {
+		if err != nil {
+			return nil, fmt.Errorf("decode image: %w", err)
+		}
 		return img, nil
 	}
 
@@ -255,7 +255,7 @@ func main() {
 	addr := flag.String("addr", ":8080", "The address to listen on.")
 	flag.Parse()
 
-	http.Handle("POST /generate", logHandler(http.HandlerFunc(handleGenerate)))
+	http.Handle("GET /generate", logHandler(http.HandlerFunc(handleGenerate)))
 	http.Handle("GET /dist/", logHandler(http.FileServerFS(distFS)))
 	http.Handle("GET /", logHandler(http.HandlerFunc(handleIndex)))
 

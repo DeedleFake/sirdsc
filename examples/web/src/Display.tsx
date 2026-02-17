@@ -26,7 +26,7 @@ export function Display({ params }: DisplayProps) {
   );
   const src = useMemo(() => `/generate?${query}`, [query]);
 
-  return src ? (
+  return params.src ? (
     <img className="flex-1 m-4" alt="Display" src={src} />
   ) : null;
 }
