@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -16,6 +18,32 @@ import (
 
 //go:embed dist
 var distFS embed.FS
+
+func configFromQuery(ctx context.Context, q url.Values) (*GenerateConfig, error) {
+	seed, _ := strconv.ParseUint(q.Get("seed"), 10, 0)
+	pat, err := GetPattern(ctx, seed, q.Get("sym") == "true", q.Get("pat"))
+	if err != nil {
+		return nil, fmt.Errorf("get pattern: %w", err)
+	}
+
+	partSize, _ := strconv.ParseInt(q.Get("partsize"), 10, 0)
+	if partSize <= 0 {
+		partSize = 100
+	}
+
+	maxDepth, _ := strconv.ParseInt(q.Get("depth"), 10, 0)
+	if maxDepth <= 0 {
+		maxDepth = 40
+	}
+
+	return &GenerateConfig{
+		Pattern:  pat,
+		PartSize: int(partSize),
+		MaxDepth: int(maxDepth),
+		Flat:     q.Get("flat") == "true",
+		Inverse:  q.Get("inverse") == "true",
+	}, nil
+}
 
 func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(req.Context())
@@ -31,19 +59,19 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 	slog := slog.With("src", src)
 
 	imgC := make(chan Image, 1)
-	patC := make(chan Image, 1)
+	configC := make(chan *GenerateConfig, 1)
 
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		pat, err := GetPattern(ctx, q)
+		config, err := configFromQuery(ctx, q)
 		if err != nil {
-			return fmt.Errorf("get pattern: %w", err)
+			return fmt.Errorf("parse query: %w", err)
 		}
 
 		select {
 		case <-ctx.Done():
 			return context.Cause(ctx)
-		case patC <- pat:
+		case configC <- config:
 			return nil
 		}
 	})
@@ -63,17 +91,18 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 	})
 
 	eg.Go(func() error {
-		var img, pat Image
-		for img == nil || pat == nil {
+		var img Image
+		var config *GenerateConfig
+		for img == nil || config == nil {
 			select {
 			case <-ctx.Done():
 				return context.Cause(ctx)
 			case img = <-imgC:
-			case pat = <-patC:
+			case config = <-configC:
 			}
 		}
 
-		err := img.Generate(ctx, rw, pat, q)
+		err := img.Generate(ctx, rw, config)
 		if err != nil {
 			return fmt.Errorf("encode image: %w", err)
 		}
