@@ -159,7 +159,16 @@ type GIFImage struct {
 	*gif.GIF
 }
 
+func (img GIFImage) copy() *gif.GIF {
+	newGIF := *img.GIF
+	newGIF.Image = make([]*image.Paletted, len(newGIF.Image))
+	return &newGIF
+}
+
 func (img GIFImage) Generate(ctx context.Context, w io.Writer, config *GenerateConfig) error {
+	newGIF := img.copy()
+	newGIF.Config.Width += config.PartSize
+
 	eg, ctx := errgroup.WithContext(ctx)
 	for i := range img.Image {
 		eg.Go(func() error {
@@ -182,20 +191,18 @@ func (img GIFImage) Generate(ctx context.Context, w io.Writer, config *GenerateC
 				config.PartSize,
 			)
 
-			img.Image[i] = out
+			newGIF.Image[i] = out
 
 			return nil
 		})
 	}
-
-	img.Config.Width += config.PartSize
 
 	err := eg.Wait()
 	if err != nil {
 		return err
 	}
 
-	return gif.EncodeAll(w, img.GIF)
+	return gif.EncodeAll(w, newGIF)
 }
 
 func (img GIFImage) ColorModel() color.Model {
