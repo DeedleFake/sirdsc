@@ -12,6 +12,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "bun-plugin-tailwind": "^0.1.2",
+    "daisyui": "^5.5.18",
     "prettier": "^3.8.1",
     "react": "^19",
     "react-dom": "^19",

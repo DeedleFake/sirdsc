@@ -15,7 +15,7 @@ const result = await Bun.build({
   minify: true,
   target: "browser",
   sourcemap: "linked",
-	publicPath: 'dist/',
+  publicPath: "dist/",
 });
 
 console.log(result);
