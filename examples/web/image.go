@@ -12,6 +12,8 @@ import (
 	"image/png"
 	"io"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/DeedleFake/sirdsc"
 	"golang.org/x/sync/errgroup"
@@ -30,7 +32,58 @@ type GenerateConfig struct {
 	Inverse  bool
 }
 
+var cache sync.Map
+
+type cacheEntry struct {
+	url    string
+	img    Image
+	cancel func()
+}
+
+func loadCachedImage(url string) (Image, bool) {
+	v, ok := cache.Load(url)
+	if !ok {
+		return nil, false
+	}
+
+	entry := v.(*cacheEntry)
+	entry.reset()
+	return entry.img, true
+}
+
+func storeImage(url string, img Image) Image {
+	entry := cacheEntry{url: url, img: img}
+	old, ok := entry.reset()
+	if !ok {
+		return img
+	}
+	old.cancel()
+	return img
+}
+
+func (entry cacheEntry) reset() (*cacheEntry, bool) {
+	if entry.cancel != nil {
+		entry.cancel()
+	}
+
+	t := time.AfterFunc(10*time.Second, func() {
+		cache.CompareAndDelete(entry.url, &entry)
+	})
+	entry.cancel = func() { t.Stop() }
+
+	old, ok := cache.Swap(entry.url, &entry)
+	if !ok {
+		return nil, false
+	}
+	return old.(*cacheEntry), true
+}
+
 func GetImage(ctx context.Context, url string) (Image, error) {
+	old, ok := loadCachedImage(url)
+	if ok {
+		return old, nil
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
@@ -50,14 +103,14 @@ func GetImage(ctx context.Context, url string) (Image, error) {
 		if err != nil {
 			return nil, fmt.Errorf("decode image: %w", err)
 		}
-		return StillImage{img}, nil
+		return storeImage(url, StillImage{img}), nil
 	}
 
 	g, err := gif.DecodeAll(io.MultiReader(&buf, rsp.Body))
 	if err != nil {
 		return nil, fmt.Errorf("decode GIF: %w", err)
 	}
-	return GIFImage{g}, nil
+	return storeImage(url, GIFImage{g}), nil
 }
 
 func GetPattern(ctx context.Context, seed uint64, sym bool, patsrc string) (Image, error) {
