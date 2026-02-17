@@ -167,7 +167,7 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 		if patsrc := q.Get("pat"); patsrc != "" {
 			tmp, err := getImage(ctx, patsrc)
 			if err != nil {
-				return fmt.Errorf("Failed to get pattern from %q: %v", patsrc, err)
+				return fmt.Errorf("get image from %q: %w", patsrc, err)
 			}
 			switch tmp := tmp.(type) {
 			case image.Image:
@@ -190,7 +190,7 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 	eg.Go(func() error {
 		img, err := getImage(ctx, src)
 		if err != nil {
-			return fmt.Errorf("Failed to get depth map from %q: %v", src, err)
+			return fmt.Errorf("get depth map from %q: %w", src, err)
 		}
 
 		select {
@@ -226,7 +226,7 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 			panic(reflect.TypeOf(img))
 		}
 		if err != nil {
-			return fmt.Errorf("Failed to encode image from %q: %v", src, err)
+			return fmt.Errorf("encode image from %q: %w", src, err)
 		}
 
 		return nil
