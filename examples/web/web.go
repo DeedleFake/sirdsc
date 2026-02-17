@@ -152,6 +152,7 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "No source specified.", http.StatusBadRequest)
 		return
 	}
+	slog := slog.With("src", src)
 
 	imgC := make(chan any, 1)
 	patC := make(chan image.Image, 1)
@@ -167,7 +168,7 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 		if patsrc := q.Get("pat"); patsrc != "" {
 			tmp, err := getImage(ctx, patsrc)
 			if err != nil {
-				return fmt.Errorf("get image from %q: %w", patsrc, err)
+				return fmt.Errorf("get image: %w", err)
 			}
 			switch tmp := tmp.(type) {
 			case image.Image:
@@ -190,7 +191,7 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 	eg.Go(func() error {
 		img, err := getImage(ctx, src)
 		if err != nil {
-			return fmt.Errorf("get depth map from %q: %w", src, err)
+			return fmt.Errorf("get depth map: %w", err)
 		}
 
 		select {
@@ -226,7 +227,7 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 			panic(reflect.TypeOf(img))
 		}
 		if err != nil {
-			return fmt.Errorf("encode image from %q: %w", src, err)
+			return fmt.Errorf("encode image: %w", err)
 		}
 
 		return nil
