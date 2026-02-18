@@ -1,134 +1,48 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"embed"
 	"flag"
 	"fmt"
-	"image"
-	"image/color/palette"
-	"image/gif"
-	_ "image/jpeg"
-	"image/png"
-	"io"
-	"io/fs"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
-	"time"
 
-	"github.com/DeedleFake/sirdsc"
 	"golang.org/x/sync/errgroup"
 )
 
-//go:embed interface/public
-var fsys embed.FS
+//go:generate bun run --bun build
 
-func init() {
-	// TODO: Replace with context usage.
-	http.DefaultClient.Timeout = 5 * time.Second
-}
+//go:embed dist
+var distFS embed.FS
 
-func getImage(url string, decodeGIFs bool) (any, error) {
-	rsp, err := http.Get(url)
+func configFromQuery(ctx context.Context, q url.Values) (*GenerateConfig, error) {
+	seed, _ := strconv.ParseUint(q.Get("seed"), 10, 0)
+	pat, err := GetPattern(ctx, seed, q.Get("sym") == "true", q.Get("pat"))
 	if err != nil {
-		return nil, err
-	}
-	defer rsp.Body.Close()
-
-	var buf bytes.Buffer
-	r := io.TeeReader(rsp.Body, &buf)
-
-	img, name, err := image.Decode(r)
-	if !decodeGIFs || (name != "gif") {
-		return img, err
+		return nil, fmt.Errorf("get pattern: %w", err)
 	}
 
-	return gif.DecodeAll(io.MultiReader(&buf, rsp.Body))
-}
-
-func generateGIF(ctx context.Context, w io.Writer, img *gif.GIF, pat image.Image, q url.Values) error {
 	partSize, _ := strconv.ParseInt(q.Get("partsize"), 10, 0)
 	if partSize <= 0 {
 		partSize = 100
 	}
 
-	max, _ := strconv.ParseInt(q.Get("depth"), 10, 0)
-	if max <= 0 {
-		max = 40
+	maxDepth, _ := strconv.ParseInt(q.Get("depth"), 10, 0)
+	if maxDepth <= 0 {
+		maxDepth = 40
 	}
 
-	eg, ctx := errgroup.WithContext(ctx)
-	for i := range img.Image {
-		eg.Go(func() error {
-			out := image.NewPaletted(image.Rect(
-				img.Image[i].Bounds().Min.X,
-				img.Image[i].Bounds().Min.Y,
-				img.Image[i].Bounds().Max.X+int(partSize),
-				img.Image[i].Bounds().Max.Y,
-			), palette.Plan9)
-
-			sirdsc.Generate(
-				out,
-				sirdsc.ImageDepthMap{
-					Image:   img.Image[i],
-					Max:     int(max),
-					Flat:    q.Get("flat") == "true",
-					Inverse: q.Get("inverse") == "true",
-				},
-				pat,
-				int(partSize),
-			)
-
-			img.Image[i] = out
-
-			return nil
-		})
-	}
-
-	img.Config.Width += int(partSize)
-
-	err := eg.Wait()
-	if err != nil {
-		return err
-	}
-
-	return gif.EncodeAll(w, img)
-}
-
-func generateImage(ctx context.Context, w io.Writer, img image.Image, pat image.Image, q url.Values) error {
-	partSize, _ := strconv.ParseInt(q.Get("partsize"), 10, 0)
-	if partSize <= 0 {
-		partSize = 100
-	}
-
-	max, _ := strconv.ParseInt(q.Get("depth"), 10, 0)
-	if max <= 0 {
-		max = 40
-	}
-
-	out := image.NewNRGBA(image.Rect(
-		img.Bounds().Min.X,
-		img.Bounds().Min.Y,
-		img.Bounds().Max.X+int(partSize),
-		img.Bounds().Max.Y,
-	))
-
-	sirdsc.Generate(
-		out,
-		sirdsc.ImageDepthMap{
-			Image:   img,
-			Max:     int(max),
-			Flat:    q.Get("flat") == "true",
-			Inverse: q.Get("inverse") == "true",
-		},
-		pat,
-		int(partSize),
-	)
-
-	return png.Encode(w, out)
+	return &GenerateConfig{
+		Pattern:  pat,
+		PartSize: int(partSize),
+		MaxDepth: int(maxDepth),
+		Flat:     q.Get("flat") == "true",
+		Inverse:  q.Get("inverse") == "true",
+	}, nil
 }
 
 func handleGenerate(rw http.ResponseWriter, req *http.Request) {
@@ -142,72 +56,55 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "No source specified.", http.StatusBadRequest)
 		return
 	}
+	slog := slog.With("src", src)
 
-	imgC := make(chan any, 1)
-	patC := make(chan image.Image, 1)
+	imgC := make(chan Image, 1)
+	configC := make(chan *GenerateConfig, 1)
 
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		seed, _ := strconv.ParseUint(q.Get("seed"), 10, 0)
-
-		pat := image.Image(sirdsc.RandImage{Seed: seed})
-		if q.Get("sym") == "true" {
-			pat = sirdsc.SymmetricRandImage{Seed: seed}
-		}
-		if patsrc := q.Get("pat"); patsrc != "" {
-			tmp, err := getImage(patsrc, false)
-			if err != nil {
-				return fmt.Errorf("Failed to get pattern from %q: %v", patsrc, err)
-			}
-			pat = tmp.(image.Image)
+		config, err := configFromQuery(ctx, q)
+		if err != nil {
+			return fmt.Errorf("parse query: %w", err)
 		}
 
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
-		case patC <- pat:
+			return context.Cause(ctx)
+		case configC <- config:
 			return nil
 		}
 	})
 
 	eg.Go(func() error {
-		img, err := getImage(src, true)
+		img, err := GetImage(ctx, src)
 		if err != nil {
-			return fmt.Errorf("Failed to get depth map from %q: %v", src, err)
+			return fmt.Errorf("get depth map: %w", err)
 		}
 
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return context.Cause(ctx)
 		case imgC <- img:
 			return nil
 		}
 	})
 
 	eg.Go(func() error {
-		var img any
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case img = <-imgC:
+		var img Image
+		var config *GenerateConfig
+		for img == nil || config == nil {
+			select {
+			case <-ctx.Done():
+				return context.Cause(ctx)
+			case img = <-imgC:
+			case config = <-configC:
+			}
 		}
 
-		var pat image.Image
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case pat = <-patC:
-		}
-
-		var err error
-		switch img := img.(type) {
-		case *gif.GIF:
-			err = generateGIF(ctx, rw, img, pat, q)
-		case image.Image:
-			err = generateImage(ctx, rw, img, pat, q)
-		}
+		err := img.Generate(ctx, rw, config)
 		if err != nil {
-			return fmt.Errorf("Failed to encode image from %q: %v", src, err)
+			return fmt.Errorf("encode image: %w", err)
 		}
 
 		return nil
@@ -216,13 +113,17 @@ func handleGenerate(rw http.ResponseWriter, req *http.Request) {
 	err := eg.Wait()
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		log.Println(err)
+		slog.Error("generate failed", "err", err)
 	}
+}
+
+func handleIndex(rw http.ResponseWriter, req *http.Request) {
+	http.ServeFileFS(rw, req, distFS, "dist/index.html")
 }
 
 func logHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		log.Printf("%v: %v %v", req.RemoteAddr, req.Method, req.URL)
+		slog.Info("request", "remote", req.RemoteAddr, "method", req.Method, "url", req.URL)
 
 		h.ServeHTTP(rw, req)
 	})
@@ -232,17 +133,14 @@ func main() {
 	addr := flag.String("addr", ":8080", "The address to listen on.")
 	flag.Parse()
 
-	sub, err := fs.Sub(fsys, "interface/public")
-	if err != nil {
-		log.Fatalf("Failed to create sub FS: %v", err)
-	}
+	http.Handle("GET /generate", logHandler(http.HandlerFunc(handleGenerate)))
+	http.Handle("GET /dist/", logHandler(http.FileServerFS(distFS)))
+	http.Handle("GET /", logHandler(http.HandlerFunc(handleIndex)))
 
-	http.Handle("/generate", logHandler(http.HandlerFunc(handleGenerate)))
-	http.Handle("/", logHandler(http.FileServer(http.FS(sub))))
-
-	log.Printf("Starting server on %q", *addr)
-	err = http.ListenAndServe(*addr, nil)
+	slog.Info("starting server", "addr", *addr)
+	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		slog.Error("failed to start server", "err", err)
+		os.Exit(1)
 	}
 }
